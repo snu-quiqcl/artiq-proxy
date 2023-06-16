@@ -16,16 +16,18 @@ def load_setup_file():
         "master_path": {master_path}
       }
     """
+    global settings
     with open("setup.json", encoding="utf-8") as setup_file:
         settings = json.load(setup_file)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    pass
+    load_setup_file()
+    yield
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
