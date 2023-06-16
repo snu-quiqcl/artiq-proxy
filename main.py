@@ -39,5 +39,18 @@ async def list_directory(directory: str = ""):
     return contents
 
 
-def get_client(target_name: str):
+def get_client(target_name: str) -> Client:
+    """Creates a client connecting to ARTIQ and returns it.
+    
+    The host is a localhost and the port is for ARTIQ master control.
+
+    Args:
+        target_name: The name of the target.
+          The possible candidates are as follows:
+            - master_schedule
+            - master_dataset_db
+            - master_device_db
+            - master_experiment_db
+          For details, see main() in artiq.frontend.artiq_client.
+    """
     return Client("::1", 3251, target_name)
