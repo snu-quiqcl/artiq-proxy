@@ -1,3 +1,5 @@
+"""Proxy server to communicate a client to ARTIQ."""
+
 from contextlib import asynccontextmanager
 import json
 import os
@@ -11,7 +13,7 @@ settings = {}
 
 def load_setup_file():
     """Loads set-up information from the setup file.
-    
+
     The file should have the following JSON structure:
 
       {
@@ -24,11 +26,11 @@ def load_setup_file():
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Lifespan events.
-    
+
     This function is set as the lifespan of the application.
-    
+
     The code before 'yield' is executed once before the application starts.
     The code after 'yield' is executed when the application is shutting down.
     """
@@ -42,7 +44,7 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/ls/")
 async def list_directory(directory: str = ""):
     """Get the list of elements in the given path.
-    
+
     The 'master_path' is used for the prefix of the path.
     """
     remote = get_client("master_experiment_db")
@@ -52,7 +54,7 @@ async def list_directory(directory: str = ""):
 
 def get_client(target_name: str) -> Client:
     """Creates a client connecting to ARTIQ and returns it.
-    
+
     The host is a localhost and the port is for ARTIQ master control.
 
     Args:
