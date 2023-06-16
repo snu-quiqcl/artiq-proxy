@@ -34,6 +34,10 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/ls/")
 async def list_directory(directory: str = ""):
+    """Get the list of elements in the given path.
+    
+    The 'master_path' is used for the prefix of the path.
+    """
     remote = get_client("master_experiment_db")
     contents = remote.list_directory(os.path.join(settings["master_path"], directory))
     return contents
