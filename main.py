@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 import json
+import os
 
 from fastapi import FastAPI
+from sipyco.pc_rpc import Client
 
 
 settings = {}
@@ -30,6 +32,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+@app.get("/ls/")
+async def list_directory(directory: str = ""):
+    remote = get_client("master_experiment_db")
+    contents = remote.list_directory(os.path.join(settings["master_path"], directory))
+    return contents
+
+
+def get_client(target_name: str):
+    return Client("::1", 3251, target_name)
