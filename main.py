@@ -5,7 +5,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from sipyco.pc_rpc import Client
+from sipyco import pc_rpc as rpc
 
 configs = {}
 
@@ -47,7 +47,7 @@ async def list_directory(directory: str = ""):
     return contents
 
 
-def get_client(target_name: str) -> Client:
+def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
     The host is a localhost and the port is for ARTIQ master control.
@@ -61,4 +61,4 @@ def get_client(target_name: str) -> Client:
             - master_experiment_db
           For details, see main() in artiq.frontend.artiq_client.
     """
-    return Client("::1", 3251, target_name)
+    return rpc.Client("::1", 3251, target_name)
