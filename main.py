@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sipyco.pc_rpc import Client
 
-
 configs = {}
 
 
