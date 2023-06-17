@@ -8,11 +8,11 @@ from fastapi import FastAPI
 from sipyco.pc_rpc import Client
 
 
-settings = {}
+configs = {}
 
 
-def load_setup_file():
-    """Loads set-up information from the setup file.
+def load_config_file():
+    """Loads configuration information from the config file.
 
     The file should have the following JSON structure:
 
@@ -20,9 +20,9 @@ def load_setup_file():
         "master_path": {master_path}
       }
     """
-    global settings
-    with open("setup.json", encoding="utf-8") as setup_file:
-        settings = json.load(setup_file)
+    global configs
+    with open("config.json", encoding="utf-8") as config_file:
+        configs = json.load(config_file)
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ async def lifespan(_app: FastAPI):
     The code before 'yield' is executed once before the application starts.
     The code after 'yield' is executed when the application is shutting down.
     """
-    load_setup_file()
+    load_config_file()
     yield
 
 
@@ -48,7 +48,7 @@ async def list_directory(directory: str = ""):
     The 'master_path' is used for the prefix of the path.
     """
     remote = get_client("master_experiment_db")
-    contents = remote.list_directory(os.path.join(settings["master_path"], directory))
+    contents = remote.list_directory(os.path.join(configs["master_path"], directory))
     return contents
 
 
