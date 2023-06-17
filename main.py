@@ -47,8 +47,7 @@ async def list_directory(directory: str = "") -> List[str]:
         directory: The path of the directory to search for.
     """
     remote = get_client("master_experiment_db")
-    contents = remote.list_directory(os.path.join(configs["master_path"], directory))
-    return contents
+    return remote.list_directory(os.path.join(configs["master_path"], directory))
 
 
 def get_client(target_name: str) -> rpc.Client:
