@@ -29,9 +29,6 @@ async def lifespan(_app: FastAPI):
     """Lifespan events.
 
     This function is set as the lifespan of the application.
-
-    The code before 'yield' is executed once before the application starts.
-    The code after 'yield' is executed when the application is shutting down.
     """
     load_config_file()
     yield
