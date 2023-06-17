@@ -11,7 +11,7 @@ configs = {}
 
 
 def load_config_file():
-    """Loads configuration information from the config file.
+    """Loads config information from the configuration file.
 
     The file should have the following JSON structure:
 
@@ -40,7 +40,7 @@ app = FastAPI(lifespan=lifespan)
 async def list_directory(directory: str = ""):
     """Get the list of elements in the given path.
 
-    The 'master_path' is used for the prefix of the path.
+    The "master_path" in the configuration file is used for the prefix of the path.
     """
     remote = get_client("master_experiment_db")
     contents = remote.list_directory(os.path.join(configs["master_path"], directory))
