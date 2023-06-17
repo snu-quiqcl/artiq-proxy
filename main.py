@@ -37,7 +37,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/ls/", response_model=List[str])
+@app.get("/ls/")
 async def list_directory(directory: str = "") -> List[str]:
     """Get the list of elements in the given path and returns it.
 
