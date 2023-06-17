@@ -3,6 +3,7 @@
 import json
 import os
 from contextlib import asynccontextmanager
+from typing import List
 
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
@@ -36,11 +37,14 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/ls/")
-async def list_directory(directory: str = ""):
-    """Get the list of elements in the given path.
+@app.get("/ls/", response_model=List[str])
+async def list_directory(directory: str = "") -> List[str]:
+    """Get the list of elements in the given path and returns it.
 
     The "master_path" in the configuration file is used for the prefix of the path.
+
+    Args:
+        directory: The path of the directory to search for.
     """
     remote = get_client("master_experiment_db")
     contents = remote.list_directory(os.path.join(configs["master_path"], directory))
