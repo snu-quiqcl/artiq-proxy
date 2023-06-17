@@ -3,7 +3,7 @@
 import json
 import os
 from contextlib import asynccontextmanager
-from typing import List
+from typing import Any, Dict, List
 
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
@@ -51,7 +51,18 @@ async def list_directory(directory: str = "") -> List[str]:
 
 
 @app.get("/args/")
-async def get_arguments(file: str):
+async def get_arguments(file: str) -> Dict[str, Dict[str, Any]]:
+    """Get arguments of the given experiment file and returns it.
+    
+    Args:
+        file: The path of the experiment file.
+
+    Returns:
+        A dictionary containing only one element of which key is the class name.
+        The value is a dictionary with two keys:
+          name: The experiment name.
+          arginfo: The dictionary containing arguments of the experiment.
+    """
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
