@@ -52,7 +52,8 @@ async def list_directory(directory: str = "") -> List[str]:
 
 @app.get("/args/")
 async def get_arguments(file: str):
-    pass
+    remote = get_client("master_experiment_db")
+    return remote.examine(file)
 
 
 def get_client(target_name: str) -> rpc.Client:
