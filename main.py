@@ -1,8 +1,8 @@
 """Proxy server to communicate a client to ARTIQ."""
 
-from contextlib import asynccontextmanager
 import json
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sipyco.pc_rpc import Client
