@@ -19,9 +19,8 @@ def load_config_file():
         "master_path": {master_path}
       }
     """
-    global configs
     with open("config.json", encoding="utf-8") as config_file:
-        configs = json.load(config_file)
+        configs.update(json.load(config_file))
 
 
 @asynccontextmanager
