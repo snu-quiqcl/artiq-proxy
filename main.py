@@ -50,6 +50,11 @@ async def list_directory(directory: str = "") -> List[str]:
     return remote.list_directory(os.path.join(configs["master_path"], directory))
 
 
+@app.get("/args/")
+async def get_arguments(file: str):
+    pass
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
