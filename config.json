@@ -1,3 +1,4 @@
 {
-    "master_path": "/home/rabi/artiq/"
+    "master_path": "/home/rabi/artiq/",
+    "repository_path": "repository"
 }

@@ -20,6 +20,7 @@ def load_config_file():
 
       {
         "master_path": {master_path}
+        "repository_path": {repository_path}
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -89,7 +90,7 @@ async def submit_experiment(file: str, args: str = "{}") -> int:
         "log_level": logging.WARNING,
         "class_name": None,
         "arguments": json.loads(args),
-        "file": file
+        "file": os.path.join(configs["repository_path"], file)
     }
     remote = get_client("master_schedule")
     return remote.submit("main", expid, 0, None, False)
