@@ -52,6 +52,16 @@ async def list_directory(directory: str = "") -> List[str]:
 
 
 class ExperimentInfo(pydantic.BaseModel):
+    """Experiment information.
+    
+    This is the return type of get_experiment_info().
+
+    Fields:
+        name: The experiment name which is set as the docstring in the experiment file.
+        arginfo: The dictionary containing arguments of the experiment.
+          Each key is an argument name and its value contains the argument type,
+          the default value, and the additional information for the argument.
+    """
     name: str
     arginfo: Dict[str, Any]
 
@@ -64,13 +74,8 @@ async def get_experiment_info(file: str) -> Any:
         file: The path of the experiment file.
 
     Returns:
-        A dictionary containing only one element of which key is the class name.
-        The value is a dictionary with two keys:
-          name: The experiment name which is set as the docstring in the experiment file.
-          arginfo: The dictionary containing arguments of the experiment.
-            Each key is an argument name and its value contains the argument type,
-            the default value, and the additional information for the argument.
-
+        A dictionary containing only one element of which key is the experiment class name.
+        The value is an ExperimentInfo object.
     """
     remote = get_client("master_experiment_db")
     return remote.examine(file)
