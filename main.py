@@ -85,7 +85,16 @@ async def get_experiment_info(file: str) -> Any:
 
 @app.get("/experiment/submit/")
 async def submit_experiment(file: str, args: str = "{}") -> int:
-    """Submit the given experiment file."""
+    """Submit the given experiment file.
+    
+    Args:
+        file: The path of the experiment file.
+        args: The arguments to submit which must be JSONifiable to a dictionary.
+          Each key is an argument name and its value is the value of the argument.
+    
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+    """
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
