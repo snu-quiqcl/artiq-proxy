@@ -50,9 +50,9 @@ async def list_directory(directory: str = "") -> List[str]:
     return remote.list_directory(os.path.join(configs["master_path"], directory))
 
 
-@app.get("/args/")
-async def get_arguments(file: str) -> Dict[str, Dict[str, Any]]:
-    """Get arguments of the given experiment file and returns it.
+@app.get("/experiment/info/")
+async def get_experiment_info(file: str) -> Dict[str, Dict[str, Any]]:
+    """Get information of the given experiment file and returns it.
     
     Args:
         file: The path of the experiment file.
