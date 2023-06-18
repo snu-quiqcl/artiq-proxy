@@ -2,6 +2,7 @@
 
 import json
 import os
+import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List
 
@@ -80,9 +81,18 @@ async def get_experiment_info(file: str) -> Any:
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
+
 @app.get("/experiment/submit/")
-async def submit_experiment(file: str) -> Any:
-    pass
+async def submit_experiment(file: str, args: str = "{}") -> int:
+    """Submit the given experiment file."""
+    expid = {
+        "log_level": logging.WARNING,
+        "class_name": None,
+        "arguments": json.loads(args),
+        "file": file
+    }
+    remote = get_client("master_schedule")
+    return remote.submit("main", expid, 0, None, False)
 
 
 def get_client(target_name: str) -> rpc.Client:
