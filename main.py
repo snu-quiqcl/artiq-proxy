@@ -59,7 +59,7 @@ async def get_arguments(file: str) -> Dict[str, Dict[str, Any]]:
 
     Returns:
         A dictionary containing only one element of which key is the class name.
-        The value is a dictionary with two keys:
+        The value is a dictionary with four keys (show only two important things):
           name: The experiment name.
           arginfo: The dictionary containing arguments of the experiment.
     """
