@@ -2,10 +2,10 @@
 
 import json
 import os
-import pydantic
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List
 
+import pydantic
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
 
