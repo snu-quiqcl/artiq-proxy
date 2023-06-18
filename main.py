@@ -80,6 +80,10 @@ async def get_experiment_info(file: str) -> Any:
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
+@app.get("/experiment/submit/")
+async def submit_experiment(file: str) -> Any:
+    pass
+
 
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
