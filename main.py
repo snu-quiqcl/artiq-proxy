@@ -1,7 +1,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import json
-import os
+import posixpath
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List
@@ -50,7 +50,7 @@ async def list_directory(directory: str = "") -> List[str]:
         directory: The path of the directory to search for.
     """
     remote = get_client("master_experiment_db")
-    return remote.list_directory(os.path.join(configs["master_path"], directory))
+    return remote.list_directory(posixpath.join(configs["master_path"], directory))
 
 
 class ExperimentInfo(pydantic.BaseModel):
@@ -99,7 +99,7 @@ async def submit_experiment(file: str, args: str = "{}") -> int:
         "log_level": logging.WARNING,
         "class_name": None,
         "arguments": json.loads(args),
-        "file": os.path.join(configs["repository_path"], file)
+        "file": posixpath.join(configs["repository_path"], file)
     }
     remote = get_client("master_schedule")
     return remote.submit("main", expid, 0, None, False)
