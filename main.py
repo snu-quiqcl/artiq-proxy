@@ -42,7 +42,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/ls/")
 async def list_directory(directory: str = "") -> List[str]:
-    """Get the list of elements in the given path and returns it.
+    """Gets the list of elements in the given path and returns it.
 
     The "master_path" in the configuration file is used for the prefix of the path.
 
@@ -70,7 +70,7 @@ class ExperimentInfo(pydantic.BaseModel):
 
 @app.get("/experiment/info/", response_model=Dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
-    """Get information of the given experiment file and returns it.
+    """Gets information of the given experiment file and returns it.
     
     Args:
         file: The path of the experiment file.
@@ -85,11 +85,11 @@ async def get_experiment_info(file: str) -> Any:
 
 @app.get("/experiment/submit/")
 async def submit_experiment(file: str, args: str = "{}") -> int:
-    """Submit the given experiment file.
+    """Submits the given experiment file.
     
     Args:
         file: The path of the experiment file.
-        args: The arguments to submit which must be JSONifiable to a dictionary.
+        args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
     
     Returns:
