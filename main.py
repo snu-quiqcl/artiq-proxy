@@ -44,13 +44,16 @@ app = FastAPI(lifespan=lifespan)
 async def list_directory(directory: str = "") -> List[str]:
     """Gets the list of elements in the given path and returns it.
 
-    The "master_path" in the configuration file is used for the prefix of the path.
+    The "master_path" and "repository_path" in the configuration file 
+    is used for the prefix of the path.
 
     Args:
         directory: The path of the directory to search for.
     """
     remote = get_client("master_experiment_db")
-    return remote.list_directory(posixpath.join(configs["master_path"], directory))
+    return remote.list_directory(posixpath.join(
+        configs["master_path"], configs["repository_path"], directory
+    ))
 
 
 class ExperimentInfo(pydantic.BaseModel):
