@@ -21,12 +21,13 @@ class RoutingTest(unittest.TestCase):
     @mock.patch.dict("main.configs", {"master_path": "master_path/"})
     def test_list_directory(self):
         test_list = ["dir1/", "dir2/", "file1.py", "file2.py"]
-        self.mocked_get_client.return_value.list_directory.return_value = test_list
+        mocked_client = self.mocked_get_client.return_value
+        mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
             for query, path in [("", ""), ("?directory=dir1/", "dir1/")]:
                 response = client.get("/ls/" + query)
                 self.mocked_load_config_file.assert_called()
-                self.mocked_get_client.return_value.list_directory.assert_called_with(
+                mocked_client.list_directory.assert_called_with(
                     "master_path/" + path
                 )
                 self.assertEqual(response.status_code, 200)
