@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 
 import main
 
-
 class RoutingTest(unittest.TestCase):
     """Unit tests for routing and each operation."""
 
@@ -76,6 +75,16 @@ class RoutingTest(unittest.TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_rid)
+
+
+class FunctionTest(unittest.TestCase):
+    """Unit tests for other functions."""
+
+    @mock.patch("main.rpc.Client")
+    def test_get_client(self, mocked_client_cls):
+        for target_name in ["name1", "name2"]:
+            main.get_client(target_name)
+            mocked_client_cls.assert_called_with("::1", 3251, target_name)
 
 
 if __name__ == "__main__":
