@@ -28,9 +28,7 @@ class RoutingTest(unittest.TestCase):
             self.mocked_load_config_file.assert_called_once()
             for query, path in [("", ""), ("?directory=dir1/", "dir1/")]:
                 response = client.get(f"/ls/{query}")
-                mocked_client.list_directory.assert_called_with(
-                    "master_path/repo_path/" + path
-                )
+                mocked_client.list_directory.assert_called_with(f"master_path/repo_path/{path}")
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_list)
 
