@@ -22,6 +22,7 @@ jobs:
       run: |
         pip install fastapi
         pip install httpx
+        pip install numpy
         pip install git+https://github.com/m-labs/sipyco.git
     - name: Run the unit tests and check coverage
       run: |
