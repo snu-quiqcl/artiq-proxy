@@ -25,7 +25,7 @@ class RoutingTest(unittest.TestCase):
         mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
             for query, path in [("", ""), ("?directory=dir1/", "dir1/")]:
-                response = client.get("/ls/" + query)
+                response = client.get(f"/ls/{query}")
                 self.mocked_load_config_file.assert_called()
                 mocked_client.list_directory.assert_called_with(
                     "master_path/" + path
