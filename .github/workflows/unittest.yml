@@ -21,7 +21,7 @@ jobs:
     - name: Add dependencies about external libraries
       run: |
         pip install fastapi
-        pip install requests
+        pip install httpx
         pip install git+https://github.com/m-labs/sipyco.git
     - name: Run the unit tests and check coverage
       run: |
