@@ -1,7 +1,8 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import json
-import os
+import posixpath
+import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List
 
@@ -19,6 +20,7 @@ def load_config_file():
 
       {
         "master_path": {master_path}
+        "repository_path": {repository_path}
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -40,7 +42,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/ls/")
 async def list_directory(directory: str = "") -> List[str]:
-    """Get the list of elements in the given path and returns it.
+    """Gets the list of elements in the given path and returns it.
 
     The "master_path" in the configuration file is used for the prefix of the path.
 
@@ -48,7 +50,7 @@ async def list_directory(directory: str = "") -> List[str]:
         directory: The path of the directory to search for.
     """
     remote = get_client("master_experiment_db")
-    return remote.list_directory(os.path.join(configs["master_path"], directory))
+    return remote.list_directory(posixpath.join(configs["master_path"], directory))
 
 
 class ExperimentInfo(pydantic.BaseModel):
@@ -68,7 +70,7 @@ class ExperimentInfo(pydantic.BaseModel):
 
 @app.get("/experiment/info/", response_model=Dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
-    """Get information of the given experiment file and returns it.
+    """Gets information of the given experiment file and returns it.
     
     Args:
         file: The path of the experiment file.
@@ -79,6 +81,28 @@ async def get_experiment_info(file: str) -> Any:
     """
     remote = get_client("master_experiment_db")
     return remote.examine(file)
+
+
+@app.get("/experiment/submit/")
+async def submit_experiment(file: str, args: str = "{}") -> int:
+    """Submits the given experiment file.
+    
+    Args:
+        file: The path of the experiment file.
+        args: The arguments to submit which must be a JSON string of a dictionary.
+          Each key is an argument name and its value is the value of the argument.
+    
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+    """
+    expid = {
+        "log_level": logging.WARNING,
+        "class_name": None,
+        "arguments": json.loads(args),
+        "file": posixpath.join(configs["repository_path"], file)
+    }
+    remote = get_client("master_schedule")
+    return remote.submit("main", expid, 0, None, False)
 
 
 def get_client(target_name: str) -> rpc.Client:
