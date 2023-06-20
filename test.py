@@ -1,5 +1,8 @@
 """Unit tests for main module."""
 
+import logging
+import json
+import posixpath
 import unittest
 from unittest import mock
 from fastapi.testclient import TestClient
@@ -51,6 +54,27 @@ class RoutingTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), test_info)
 
+    @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
+    def test_submit_experiment(self):
+        test_rid = 0
+        mocked_client = self.mocked_get_client.return_value
+        mocked_client.submit.return_value = test_rid
+        with TestClient(main.app) as client:
+            self.mocked_load_config_file.assert_called_once()
+            for query, file, args in [
+                ("?file=experiment1.py", "experiment1.py", "{}"),
+                ('?file=experiment2.py&args={"k": "v"}', "experiment2.py", '{"k": "v"}')]:
+                response = client.get(f"/experiment/submit/{query}")
+                mocked_client.submit.assert_called_with(
+                    "main", {
+                        "log_level": logging.WARNING,
+                        "class_name": None,
+                        "arguments": json.loads(args),
+                        "file": posixpath.join("repo_path", file)
+                    }, 0, None, False
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), test_rid)
 
 
 if __name__ == "__main__":
