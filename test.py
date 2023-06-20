@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 import main
 
 
-class Test(unittest.TestCase):
+class RoutingTest(unittest.TestCase):
     """Unit tests for routing and each operation."""
 
     def setUp(self):
