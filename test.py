@@ -29,9 +29,10 @@ class RoutingTest(unittest.TestCase):
         mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
-            for query, path in [("", ""), ("?directory=dir1/", "dir1/")]:
-                response = client.get(f"/ls/{query}")
-                mocked_client.list_directory.assert_called_with(f"master_path/repo_path/{path}")
+            for params in [{}, {"directory": "dir1/"}]:
+                response = client.get(f"/ls/", params=params)
+                mocked_client.list_directory.assert_called_with(
+                    f"master_path/repo_path/{params.get('directory', '')}")
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_list)
 
@@ -49,7 +50,7 @@ class RoutingTest(unittest.TestCase):
         mocked_client.examine.return_value = test_info
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
-            response = client.get("/experiment/info/?file=experiment.py")
+            response = client.get("/experiment/info/", params={'file': 'experiment.py'})
             mocked_client.examine.assert_called_with("experiment.py")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), test_info)
@@ -61,16 +62,16 @@ class RoutingTest(unittest.TestCase):
         mocked_client.submit.return_value = test_rid
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
-            for query, file, args in [
-                ("?file=experiment1.py", "experiment1.py", "{}"),
-                ('?file=experiment2.py&args={"k": "v"}', "experiment2.py", '{"k": "v"}')]:
-                response = client.get(f"/experiment/submit/{query}")
+            for params in [
+                {"file": "experiment1.py"},
+                {"file": "experiment2.py", "args": '{"k": "v"}'}]:
+                response = client.get("/experiment/submit/", params=params)
                 mocked_client.submit.assert_called_with(
                     "main", {
                         "log_level": logging.WARNING,
                         "class_name": None,
-                        "arguments": json.loads(args),
-                        "file": posixpath.join("repo_path", file)
+                        "arguments": json.loads(params.get("args", "{}")),
+                        "file": posixpath.join("repo_path", params["file"])
                     }, 0, None, False
                 )
                 self.assertEqual(response.status_code, 200)
