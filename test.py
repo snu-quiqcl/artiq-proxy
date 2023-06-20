@@ -80,6 +80,16 @@ class RoutingTest(unittest.TestCase):
 class FunctionTest(unittest.TestCase):
     """Unit tests for other functions."""
 
+    @mock.patch("builtins.open")
+    @mock.patch("json.load",
+                return_value={"master_path": "master_path/", "repository_path": "repo_path/"})
+    def test_load_config_file(self, mocked_load, mocked_open):
+        main.load_config_file()
+        mocked_open.assert_called_once_with("config.json", encoding="utf-8")
+        mocked_load.assert_called_once()
+        self.assertEquals(main.configs,
+                          {"master_path": "master_path/", "repository_path": "repo_path/"})
+
     @mock.patch("main.rpc.Client")
     def test_get_client(self, mocked_client_cls):
         for target_name in ["name1", "name2"]:
