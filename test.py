@@ -20,7 +20,7 @@ class Test(unittest.TestCase):
 
     @mock.patch.dict("main.configs", {"master_path": "master_path/"})
     def test_list_directory_return(self):
-        """Tests if the return value is correct."""
+        """Tests if list_directory() returns correctly."""
         test_list = ["dir1/", "dir2/", "file1.py", "file2.py"]
         self.mocked_get_client.return_value.list_directory.return_value = test_list
         with TestClient(main.app) as client:
