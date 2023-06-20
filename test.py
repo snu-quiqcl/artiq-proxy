@@ -34,6 +34,26 @@ class RoutingTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_list)
 
+    def test_get_experiment_info(self):
+        test_info = {
+            "ExperimentClass": main.ExperimentInfo(
+                name="experiment_name",
+                arginfo={
+                    "arg1": [{"ty": "StringValue", "default": "DEFAULT"}, None, None],
+                    "arg2": [{"ty": "BooleanValue", "default": True}, None, None]
+                }
+            )
+        }
+        mocked_client = self.mocked_get_client.return_value
+        mocked_client.examine.return_value = test_info
+        with TestClient(main.app) as client:
+            self.mocked_load_config_file.assert_called_once()
+            response = client.get("/experiment/info/?file=experiment.py")
+            mocked_client.examine.assert_called_with("experiment.py")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), test_info)
+
+
 
 if __name__ == "__main__":
     unittest.main()
