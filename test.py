@@ -1,9 +1,11 @@
 """Unit tests for main module."""
 
-import logging
 import json
+import logging
 import posixpath
+import time
 import unittest
+from datetime import datetime
 from unittest import mock
 
 from fastapi.testclient import TestClient
@@ -64,17 +66,33 @@ class RoutingTest(unittest.TestCase):
             self.mocked_load_config_file.assert_called_once()
             test_params = (
                 {"file": "experiment1.py"},
-                {"file": "experiment2.py", "args": '{"k": "v"}'}
+                {"file": "experiment2.py", "args": '{"k": "v"}'},
+                {"file": "experiment3.py", "pipeline": "minor"},
+                {"file": "experiment3.py", "priority": 1},
+                {"file": "experiment3.py", "pipeline": "2023-06-26T10:00:00"},
             )
             for params in test_params:
+                response = client.get("/experiment/submit/", params=params)
+                file = posixpath.join("repo_path", params["file"])
+                args = json.loads(params.get("args", "{}"))
+                pipeline = params.get("pipeline", "main")
+                priority = params.get("priority", 0)
+                timed = params.get("timed", None)
+                due_date = None if timed is None \
+                           else time.mktime(datetime.fromisoformat(timed).timetuple())
                 expid = {
                     "log_level": logging.WARNING,
                     "class_name": None,
-                    "arguments": json.loads(params.get("args", "{}")),
-                    "file": posixpath.join("repo_path", params["file"])
+                    "arguments": args,
+                    "file": file
                 }
-                response = client.get("/experiment/submit/", params=params)
-                self.mocked_client.submit.assert_called_with("main", expid, 0, None, False)
+                self.mocked_client.submit.assert_called_with(
+                    pipeline,
+                    expid,
+                    priority,
+                    due_date,
+                    False
+                )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_rid)
 
