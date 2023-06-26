@@ -1,10 +1,12 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import json
-import posixpath
 import logging
+import posixpath
+import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import pydantic
 from fastapi import FastAPI
@@ -87,13 +89,23 @@ async def get_experiment_info(file: str) -> Any:
 
 
 @app.get("/experiment/submit/")
-async def submit_experiment(file: str, args: str = "{}") -> int:
+async def submit_experiment(
+    file: str,
+    args: str = "{}",
+    pipeline: str = "main",
+    priority: int = 0,
+    timed: Optional[str] = None
+) -> int:
     """Submits the given experiment file.
     
     Args:
         file: The path of the experiment file.
         args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
+        pipeline: The pipeline to run the experiment in.
+        priority: The priority that higher value means sooner scheduling.
+        timed: The due date for the experiment of which format is "YYYY-MM-DDTHH:MM:SS".
+          If there is no due date, it is set to None.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
@@ -104,8 +116,9 @@ async def submit_experiment(file: str, args: str = "{}") -> int:
         "arguments": json.loads(args),
         "file": posixpath.join(configs["repository_path"], file)
     }
+    due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
-    return remote.submit("main", expid, 0, None, False)
+    return remote.submit(pipeline, expid, priority, due_date, False)
 
 
 def get_client(target_name: str) -> rpc.Client:
