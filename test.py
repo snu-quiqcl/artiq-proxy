@@ -29,9 +29,10 @@ class RoutingTest(unittest.TestCase):
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
             for params in [{}, {"directory": "dir1/"}]:
+                directory = params.get('directory', '')
                 response = client.get("/ls/", params=params)
                 mocked_client.list_directory.assert_called_with(
-                    f"master_path/repo_path/{params.get('directory', '')}")
+                    f"master_path/repo_path/{directory}")
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_list)
 
@@ -64,15 +65,14 @@ class RoutingTest(unittest.TestCase):
             for params in [
                 {"file": "experiment1.py"},
                 {"file": "experiment2.py", "args": '{"k": "v"}'}]:
+                expid = {
+                    "log_level": logging.WARNING,
+                    "class_name": None,
+                    "arguments": json.loads(params.get("args", "{}")),
+                    "file": posixpath.join("repo_path", params["file"])
+                }
                 response = client.get("/experiment/submit/", params=params)
-                mocked_client.submit.assert_called_with(
-                    "main", {
-                        "log_level": logging.WARNING,
-                        "class_name": None,
-                        "arguments": json.loads(params.get("args", "{}")),
-                        "file": posixpath.join("repo_path", params["file"])
-                    }, 0, None, False
-                )
+                mocked_client.submit.assert_called_with("main", expid, 0, None, False)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_rid)
 
