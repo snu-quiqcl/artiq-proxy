@@ -28,7 +28,7 @@ class RoutingTest(unittest.TestCase):
         mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
-            for params in [{}, {"directory": "dir1/"}]:
+            for params in ({}, {"directory": "dir1/"}):
                 directory = params.get('directory', '')
                 response = client.get("/ls/", params=params)
                 mocked_client.list_directory.assert_called_with(
@@ -62,9 +62,11 @@ class RoutingTest(unittest.TestCase):
         mocked_client.submit.return_value = test_rid
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
-            for params in [
+            test_params = (
                 {"file": "experiment1.py"},
-                {"file": "experiment2.py", "args": '{"k": "v"}'}]:
+                {"file": "experiment2.py", "args": '{"k": "v"}'}
+            )
+            for params in test_params:
                 expid = {
                     "log_level": logging.WARNING,
                     "class_name": None,
@@ -92,7 +94,7 @@ class FunctionTest(unittest.TestCase):
 
     @mock.patch("main.rpc.Client")
     def test_get_client(self, mocked_client_cls):
-        for target_name in ["name1", "name2"]:
+        for target_name in ("name1", "name2"):
             main.get_client(target_name)
             mocked_client_cls.assert_called_with("::1", 3251, target_name)
 
