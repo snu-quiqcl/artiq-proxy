@@ -29,7 +29,7 @@ class RoutingTest(unittest.TestCase):
         with TestClient(main.app) as client:
             self.mocked_load_config_file.assert_called_once()
             for params in [{}, {"directory": "dir1/"}]:
-                response = client.get(f"/ls/", params=params)
+                response = client.get("/ls/", params=params)
                 mocked_client.list_directory.assert_called_with(
                     f"master_path/repo_path/{params.get('directory', '')}")
                 self.assertEqual(response.status_code, 200)
