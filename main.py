@@ -103,9 +103,9 @@ async def submit_experiment(
         args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
         pipeline: The pipeline to run the experiment in.
-        priority: The priority that higher value means sooner scheduling.
-        timed: The due date for the experiment of which format is "YYYY-MM-DDTHH:MM:SS".
-          If there is no due date, it is set to None.
+        priority: Higher value means sooner scheduling.
+        timed: The due date for the experiment in ISO format.
+          None for no due date.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
