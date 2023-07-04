@@ -90,7 +90,10 @@ async def get_experiment_info(file: str) -> Any:
 
 @app.get("/experiment/code/")
 async def get_experiment_code(file: str) -> str:
-    return ""
+    full_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+    with open(full_path, encoding="utf-8") as experiment_file:
+        code = experiment_file.read()
+    return code
 
 
 @app.get("/experiment/submit/")
