@@ -88,6 +88,11 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
+@app.get("/experiment/code/")
+async def get_experiment_code(file: str) -> str:
+    return ""
+
+
 @app.get("/experiment/submit/")
 async def submit_experiment(
     file: str,
