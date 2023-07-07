@@ -34,7 +34,6 @@ class RoutingTest(unittest.TestCase):
             for params in ({}, {"directory": "dir1/"}):
                 directory = params.get('directory', '')
                 response = client.get("/ls/", params=params)
-                directory = params.get('directory', '')
                 self.mocked_client.list_directory.assert_called_with(
                     f"master_path/repo_path/{directory}")
                 self.assertEqual(response.status_code, 200)
