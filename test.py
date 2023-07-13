@@ -109,8 +109,10 @@ class FunctionTest(unittest.TestCase):
         main.load_config_file()
         mocked_open.assert_called_once_with("config.json", encoding="utf-8")
         mocked_load.assert_called_once()
-        self.assertEqual(main.configs,
-                          {"master_path": "master_path/", "repository_path": "repo_path/"})
+        self.assertEqual(
+            main.configs,
+            {"master_path": "master_path/", "repository_path": "repo_path/"}
+        )
 
     @mock.patch("main.rpc.Client")
     def test_get_client(self, mocked_client_cls):
