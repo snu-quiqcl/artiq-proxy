@@ -55,7 +55,10 @@ class RoutingTest(unittest.TestCase):
             response = client.get("/experiment/info/", params={'file': 'experiment.py'})
             self.mocked_client.examine.assert_called_with("experiment.py")
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json(), test_info)
+            self.assertEqual(
+                response.json()["ExperimentClass"],
+                test_info["ExperimentClass"].dict()
+            )
 
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
