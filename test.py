@@ -55,7 +55,10 @@ class RoutingTest(unittest.TestCase):
             response = client.get("/experiment/info/", params={'file': 'experiment.py'})
             self.mocked_client.examine.assert_called_with("experiment.py")
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json(), test_info)
+            self.assertEqual(
+                response.json()["ExperimentClass"],
+                test_info["ExperimentClass"].dict()
+            )
 
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
@@ -106,8 +109,10 @@ class FunctionTest(unittest.TestCase):
         main.load_config_file()
         mocked_open.assert_called_once_with("config.json", encoding="utf-8")
         mocked_load.assert_called_once()
-        self.assertEqual(main.configs,
-                          {"master_path": "master_path/", "repository_path": "repo_path/"})
+        self.assertEqual(
+            main.configs,
+            {"master_path": "master_path/", "repository_path": "repo_path/"}
+        )
 
     @mock.patch("main.rpc.Client")
     def test_get_client(self, mocked_client_cls):
