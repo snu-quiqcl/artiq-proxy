@@ -54,7 +54,7 @@ async def list_directory(directory: str = "") -> List[str]:
 
     Returns:
         A list with items in the given directory.
-        It lists directories before files, and is sorted alphabetically internally.
+        It lists directories before files, sorted in an alphabetical order.
     """
     remote = get_client("master_experiment_db")
     full_path = posixpath.join(configs["master_path"], configs["repository_path"], directory)
