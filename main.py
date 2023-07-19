@@ -51,11 +51,18 @@ async def list_directory(directory: str = "") -> List[str]:
 
     Args:
         directory: The path of the directory to search for.
+
+    Returns:
+        A list with items in the given directory.
+        It lists directories before files, sorted in an alphabetical order.
     """
     remote = get_client("master_experiment_db")
-    return remote.list_directory(posixpath.join(
-        configs["master_path"], configs["repository_path"], directory
-    ))
+    full_path = posixpath.join(configs["master_path"], configs["repository_path"], directory)
+    item_list = remote.list_directory(full_path)
+    return sorted(
+        item_list,
+        key=lambda item: (not item.endswith("/"), item)
+    )
 
 
 class ExperimentInfo(pydantic.BaseModel):
