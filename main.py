@@ -2,7 +2,9 @@
 
 import json
 import logging
+import os
 import posixpath
+import shutil
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -121,8 +123,8 @@ async def submit_experiment(
         The run identifier, an integer which is incremented at each experiment submission.
     """
     if visualize:
-        full_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
-        with open(full_path, encoding="utf-8") as experiment_file:
+        experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        with open(experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
         # TODO(BECATRUE): The code will be modifed in #37.
     else:
@@ -135,7 +137,17 @@ async def submit_experiment(
     }
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
-    return remote.submit(pipeline, expid, priority, due_date, False)
+    rid = remote.submit(pipeline, expid, priority, due_date, False)
+    if visualize:
+        visualize_dir_path = posixpath.join(
+            configs["master_path"],
+            configs["visualize_path"],
+            f"{rid}/"
+        )
+        os.makedirs(visualize_dir_path)
+        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
+        shutil.copyfile(experiment_path, copied_experiment_path)
+    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
