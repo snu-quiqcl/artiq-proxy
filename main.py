@@ -95,6 +95,19 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
+@app.get("/experiment/queue/", response_model=Dict)
+async def get_experiment_queue() -> Dict:
+    """Gets the list of queued experiment returns it.
+
+    Returns:
+        A dictionary of queued experiments with rid as their keys.
+        It includes the running experiment with different "status" value.
+    """
+    remote = get_client("master_schedule")
+    current_experiment = remote.get_status()
+    return current_experiment
+
+
 @app.get("/experiment/code/")
 async def get_experiment_code(file: str) -> str:
     """Gets code of the given experiment file and returns it.
