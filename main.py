@@ -172,7 +172,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     if visualize:
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
         with open(experiment_path, encoding="utf-8") as experiment_file:
-            _code = experiment_file.read()
+            code = experiment_file.read()
         # TODO(BECATRUE): The code will be modifed in #37.
     else:
         # TODO(BECATRUE): The exact experiment path will be assigned in #37.
