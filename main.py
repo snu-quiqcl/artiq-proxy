@@ -98,14 +98,14 @@ async def get_experiment_info(file: str) -> Any:
 
 
 @app.get("/experiment/submit/")
-async def submit_experiment(
+async def submit_experiment(  # pylint: disable=too-many-arguments
     file: str,
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
     timed: Optional[str] = None,
     visualize: Optional[bool] = False
-) -> int:  # pylint: disable=too-many-arguments
+) -> int:
     """Submits the given experiment file.
     
     Args:
