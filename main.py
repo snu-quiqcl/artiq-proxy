@@ -121,7 +121,10 @@ async def submit_experiment(
         The run identifier, an integer which is incremented at each experiment submission.
     """
     if visualize:
-        pass
+        full_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        with open(full_path, encoding="utf-8") as experiment_file:
+            code = experiment_file.read()
+        # TODO(BECATRUE): The code will be modifed in #37.
     else:
         pass
     expid = {
