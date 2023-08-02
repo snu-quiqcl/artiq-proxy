@@ -105,7 +105,7 @@ async def submit_experiment(
     priority: int = 0,
     timed: Optional[str] = None,
     visualize: Optional[bool] = False
-) -> int:
+) -> int:  # pylint: disable=too-many-arguments
     """Submits the given experiment file.
     
     Args:
@@ -125,7 +125,7 @@ async def submit_experiment(
     if visualize:
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
         with open(experiment_path, encoding="utf-8") as experiment_file:
-            code = experiment_file.read()
+            _code = experiment_file.read()
         # TODO(BECATRUE): The code will be modifed in #37.
     else:
         pass
