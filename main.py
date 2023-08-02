@@ -114,7 +114,8 @@ async def submit_experiment(
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
-    timed: Optional[str] = None
+    timed: Optional[str] = None,
+    visualize: Optional[bool] = False
 ) -> int:
     """Submits the given experiment file.
     
@@ -126,10 +127,16 @@ async def submit_experiment(
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
+        visualize: If True, the experiment file is modified for visualization.
+          The original file and vcd file are saved in the visualize path set in config.json.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    if visualize:
+        pass
+    else:
+        pass
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
