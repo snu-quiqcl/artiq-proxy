@@ -201,10 +201,12 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
             "args": args_dict,
             "pipeline": pipeline,
             "priority": priority,
-            "submission_time": datetime.now().isoformat()
+            "timed": timed,
+            "submission_time": datetime.now().isoformat(timespec="seconds")
         }
-        if timed is not None:
-            metadata["timed"] = timed
+        metadata_path = posixpath.join(visualize_dir_path, "metadata.json")
+        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
+            json.dump(metadata, metadata_file)
     return rid
 
 
