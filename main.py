@@ -95,8 +95,8 @@ async def get_experiment_info(file: str) -> Any:
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
-
-current_queue = previous_queue = dict()
+previous_queue = {}
+current_queue = {}
 @app.get("/experiment/queue/", response_model=Dict[int, Dict[str, Any]])
 async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
     """Gets the list of queued experiment and returns it.
@@ -107,12 +107,13 @@ async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
           "priority", "status", "flush", "pipeline", "expid", and etc.
         It includes the running experiment with different "status" value.
     """
-    global current_queue, previous_queue
     remote = get_client("master_schedule")
     while current_queue == previous_queue:
         await asyncio.sleep(0)
-        current_queue = remote.get_status()
-    previous_queue = current_queue
+        current_queue.clear()
+        current_queue.update(remote.get_status())
+    previous_queue.clear()
+    previous_queue.update(current_queue)
     return current_queue
 
 
