@@ -4,6 +4,7 @@ import json
 import logging
 import posixpath
 import time
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -95,8 +96,9 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/experiment/queue/", response_model=Dict[int, Dict])
-async def get_experiment_queue() -> Dict[int, Dict]:
+current_queue = previous_queue = dict()
+@app.get("/experiment/queue/", response_model=Dict[int, Dict[str, Any]])
+async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
     """Gets the list of queued experiment and returns it.
 
     Returns:
@@ -105,8 +107,13 @@ async def get_experiment_queue() -> Dict[int, Dict]:
           "priority", "status", "flush", "pipeline", "expid", and etc.
         It includes the running experiment with different "status" value.
     """
+    global current_queue, previous_queue
     remote = get_client("master_schedule")
-    return remote.get_status()
+    while current_queue == previous_queue:
+        await asyncio.sleep(0)
+        current_queue = remote.get_status()
+    previous_queue = current_queue
+    return current_queue
 
 
 @app.get("/experiment/code/")
