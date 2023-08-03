@@ -95,8 +95,8 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/experiment/queue/", response_model=Dict[int])
-async def get_experiment_queue() -> Dict[int]:
+@app.get("/experiment/queue/", response_model=Dict[int, Dict])
+async def get_experiment_queue() -> Dict[int, Dict]:
     """Gets the list of queued experiment and returns it.
 
     Returns:
