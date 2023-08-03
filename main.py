@@ -177,10 +177,11 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     else:
         # TODO(BECATRUE): The exact experiment path will be assigned in #37.
         pass
+    args_dict = json.loads(args)
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
-        "arguments": json.loads(args),
+        "arguments": args_dict,
         "file": posixpath.join(configs["repository_path"], file)
     }
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
@@ -195,6 +196,15 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
         os.makedirs(visualize_dir_path)
         copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
         shutil.copyfile(experiment_path, copied_experiment_path)
+        metadata = {
+            "file": experiment_path,
+            "args": args_dict,
+            "pipeline": pipeline,
+            "priority": priority,
+            "submission_time": datetime.now().isoformat()
+        }
+        if timed is not None:
+            metadata["timed"] = timed
     return rid
 
 
