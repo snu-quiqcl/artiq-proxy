@@ -148,7 +148,9 @@ async def request_termination_of_experiment(rid: int):
 def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
     modified_stmt_list = []
     for stmt in stmt_list:
-        modified_stmt_list.append(ast.Expr(value=ast.Constant(value=1)))
+        tracking_line_code = f"rtio_log('line', {stmt.lineno})"
+        tracking_line_stmt = ast.parse(tracking_line_code).body
+        modified_stmt_list.extend(tracking_line_stmt)
         for attr in ("body", "handlers", "orelse", "finalbody"):
             if hasattr(stmt, attr):
                 setattr(stmt, attr, add_tracking_line(getattr(stmt, attr)))
