@@ -104,7 +104,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     pipeline: str = "main",
     priority: int = 0,
     timed: Optional[str] = None,
-    visualize: Optional[bool] = False
+    visualize: bool = False
 ) -> int:
     """Submits the given experiment file.
     
