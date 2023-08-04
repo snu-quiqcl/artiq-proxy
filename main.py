@@ -151,6 +151,10 @@ def modify_experiment_code(code: str, experiment_cls_name: str):
         stmt for stmt in code_ast.body
         if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
     )
+    run_func_ast = next(
+        stmt for stmt in experiment_cls_ast.body
+        if isinstance(stmt, ast.FunctionDef) and stmt.name == "run"
+    )
     return ast.unparse(code_ast)
 
 
