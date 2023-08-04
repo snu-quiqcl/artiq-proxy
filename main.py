@@ -128,6 +128,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
             _code = experiment_file.read()
         # TODO(BECATRUE): The code will be modifed in #37.
     else:
+        # TODO(BECATRUE): The exact experiment path will be assigned in #37.
         pass
     expid = {
         "log_level": logging.WARNING,
