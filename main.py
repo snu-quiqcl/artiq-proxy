@@ -145,6 +145,14 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
+def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
+    modified_stmt_list = []
+    for stmt in stmt_list:
+        modified_stmt_list.append(ast.Expr(value=ast.Constant(value=1)))
+        modified_stmt_list.append(stmt)
+    return modified_stmt_list
+
+
 def modify_experiment_code(code: str, experiment_cls_name: str):
     code_ast = ast.parse(code)
     experiment_cls_ast = next(
@@ -155,6 +163,7 @@ def modify_experiment_code(code: str, experiment_cls_name: str):
         stmt for stmt in experiment_cls_ast.body
         if isinstance(stmt, ast.FunctionDef) and stmt.name == "run"
     )
+    run_func_ast.body = add_tracking_line(run_func_ast.body)
     return ast.unparse(code_ast)
 
 
