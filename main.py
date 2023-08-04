@@ -161,17 +161,17 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
 
 
 def modify_experiment_code(code: str, experiment_cls_name: str):
-    code_ast = ast.parse(code)
+    code_mod = ast.parse(code)
     experiment_cls_ast = next(
-        stmt for stmt in code_ast.body
+        stmt for stmt in code_mod.body
         if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
     )
-    run_func_ast = next(
+    run_func_stmt = next(
         stmt for stmt in experiment_cls_ast.body
         if isinstance(stmt, ast.FunctionDef) and stmt.name == "run"
     )
-    run_func_ast.body = add_tracking_line(run_func_ast.body)
-    return ast.unparse(code_ast)
+    run_func_stmt.body = add_tracking_line(run_func_stmt.body)
+    return ast.unparse(code_mod)
 
 
 @app.get("/experiment/submit/")
