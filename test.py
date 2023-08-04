@@ -57,7 +57,7 @@ class RoutingTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.json()["ExperimentClass"],
-                test_info["ExperimentClass"].dict()
+                test_info["ExperimentClass"].model_dump()
             )
 
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
