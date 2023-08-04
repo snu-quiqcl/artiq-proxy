@@ -149,6 +149,9 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
     modified_stmt_list = []
     for stmt in stmt_list:
         modified_stmt_list.append(ast.Expr(value=ast.Constant(value=1)))
+        for attr in ("body", "handlers", "orelse", "finalbody"):
+            if hasattr(stmt, attr):
+                setattr(stmt, attr, add_tracking_line(getattr(stmt, attr)))
         modified_stmt_list.append(stmt)
     return modified_stmt_list
 
