@@ -1,5 +1,6 @@
 """Proxy server to communicate a client to ARTIQ."""
 
+import ast
 import json
 import logging
 import os
@@ -144,9 +145,19 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
+def modify_experiment_code(code: str, experiment_cls_name: str):
+    code_ast = ast.parse(code)
+    experiment_cls_ast = next(
+        stmt for stmt in code_ast.body
+        if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
+    )
+    return ast.unparse(code_ast)
+
+
 @app.get("/experiment/submit/")
 async def submit_experiment(  # pylint: disable=too-many-arguments
     file: str,
+    cls: str,
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
@@ -157,6 +168,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     
     Args:
         file: The path of the experiment file.
+        cls: The class name of the experiment.
         args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
         pipeline: The pipeline to run the experiment in.
@@ -173,7 +185,8 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
         with open(experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
-        modified_code = modify_experiment_code(code)
+        modified_code = modify_experiment_code(code, cls)
+        print(modified_code)
     else:
         # TODO(BECATRUE): The exact experiment path will be assigned in #37.
         pass
