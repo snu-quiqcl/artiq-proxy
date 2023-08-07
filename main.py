@@ -119,7 +119,7 @@ async def delete_experiment(rid: int):
     remote.delete(rid)
 
 
-@app.post("/experiment/request_termination/")
+@app.post("/experiment/terminate/")
 async def request_termination_of_experiment(rid: int):
     """Requests graceful termination of the run with the specified RID.
 
