@@ -151,6 +151,12 @@ async def get_running_experiment() -> Optional[int]:
         The run identifier of the running experiment.
         If no running experiment, it returns None.
     """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    try:
+        return next(filter(lambda rid: status[rid]["status"] == "running", status))
+    except StopIteration:
+        return None
 
 
 def get_client(target_name: str) -> rpc.Client:
