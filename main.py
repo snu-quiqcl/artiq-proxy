@@ -141,6 +141,18 @@ async def submit_experiment(
     return remote.submit(pipeline, expid, priority, due_date, False)
 
 
+@app.get("/experiment/running/")
+async def get_running_experiment() -> Optional[int]:
+    """Gets the running experiment RID.
+
+    It assumes that there is at most one running experiment.
+    
+    Returns:
+        The run identifier of the running experiment.
+        If no running experiment, it returns None.
+    """
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
