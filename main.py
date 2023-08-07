@@ -109,22 +109,22 @@ async def get_experiment_code(file: str) -> str:
 
 
 @app.post("/experiment/delete/")
-async def delete_experiment(rid):
+async def delete_experiment(rid: int):
     """Kills the run with the specified RID.
 
     Args:
-        rid: rid value of the target experiment.
+        rid: The run identifier value of the target experiment.
     """
     remote = get_client("master_schedule")
     remote.delete(rid)
 
 
 @app.post("/experiment/request_termination/")
-async def request_termination_of_experiment(rid):
+async def request_termination_of_experiment(rid: int):
     """Requests graceful termination of the run with the specified RID.
 
     Args:
-        rid: rid value of the target experiment.
+        rid: The run identifier value of the target experiment.
     """
     remote = get_client("master_schedule")
     remote.request_termination(rid)
