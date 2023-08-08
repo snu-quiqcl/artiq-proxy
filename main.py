@@ -97,7 +97,6 @@ async def get_experiment_info(file: str) -> Any:
 
 
 previous_queue = {}
-current_queue = {}
 
 
 @app.get("/experiment/queue/")
@@ -111,6 +110,7 @@ async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
         It includes the running experiment with different "status" value.
     """
     remote = get_client("master_schedule")
+    current_queue = previous_queue
     while current_queue == previous_queue:
         await asyncio.sleep(0)
         current_queue.clear()
