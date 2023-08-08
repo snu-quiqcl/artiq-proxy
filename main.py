@@ -98,14 +98,16 @@ async def get_experiment_info(file: str) -> Any:
 
 previous_queue = {}
 current_queue = {}
-@app.get("/experiment/queue/", response_model=Dict[int, Dict[str, Any]])
+
+
+@app.get("/experiment/queue/")
 async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
     """Gets the list of queued experiment and returns it.
 
     Returns:
         A dictionary of queued experiments with rid as their keys.
         The value of each corresponding rid is a dictionary with several information:
-          "priority", "status", "flush", "pipeline", "expid", and etc.
+          "priority", "status", "due_date", "pipeline", "expid", etc.
         It includes the running experiment with different "status" value.
     """
     remote = get_client("master_schedule")
