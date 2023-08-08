@@ -97,19 +97,6 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/experiment/code/")
-async def get_experiment_code(file: str) -> str:
-    """Gets code of the given experiment file and returns it.
-    
-    Args:
-        file: The path of the experiment file.
-    """
-    full_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
-    with open(full_path, encoding="utf-8") as experiment_file:
-        code = experiment_file.read()
-    return code
-
-
 @app.post("/experiment/delete/")
 async def delete_experiment(rid: int):
     """Kills the run with the specified RID.
