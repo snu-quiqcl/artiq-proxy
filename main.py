@@ -160,6 +160,9 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
 
 def modify_experiment_code(code: str, experiment_cls_name: str):
     code_mod = ast.parse(code)
+    # import subprocess module
+    import_subprocess_stmt = ast.parse("import subprocess").body
+    code_mod.body.insert(0, import_subprocess_stmt)
     experiment_cls_stmt = next(
         stmt for stmt in code_mod.body
         if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
