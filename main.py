@@ -160,9 +160,13 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
 
 def modify_experiment_code(code: str, experiment_cls_name: str):
     code_mod = ast.parse(code)
-    # import subprocess module
-    import_subprocess_stmt = ast.parse("import subprocess").body
-    code_mod.body.insert(0, import_subprocess_stmt)
+    # import modules
+    import_code = """
+import subprocess
+import posixpath
+    """
+    import_stmt = ast.parse(import_code).body
+    code_mod.body = import_stmt + code_mod.body
     experiment_cls_stmt = next(
         stmt for stmt in code_mod.body
         if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
@@ -177,9 +181,18 @@ def modify_experiment_code(code: str, experiment_cls_name: str):
     write_vcd_call_stmt = ast.parse("write_vcd()").body
     run_func_stmt.body.append(write_vcd_call_stmt)
     # define write_vcd()
-    write_vcd_func_code = """
+    write_vcd_func_code = f"""
 def write_vcd(self):
-    pass
+    result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
+                            capture_output=True, shell=True, text=True)
+    rid = int(result.stdout)
+    vcd_path = posixpath.join(
+        "{configs["master_path"]}",
+        "{configs["visualize_path"]}",
+        f"{{rid}}/rtio.log"
+    )
+    subprocess.run("artiq_coreanalyzer -w f'{{vcd_path}}'",
+                   capture_output=True, shell=True)
     """
     write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
     experiment_cls_stmt.body.append(write_vcd_func_stmt)
