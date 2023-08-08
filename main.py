@@ -168,7 +168,18 @@ def modify_experiment_code(code: str, experiment_cls_name: str):
         stmt for stmt in experiment_cls_stmt.body
         if isinstance(stmt, ast.FunctionDef) and stmt.name == "run"
     )
+    # make logs to track each line
     run_func_stmt.body = add_tracking_line(run_func_stmt.body)
+    # call write_vcd()
+    write_vcd_call_stmt = ast.parse("write_vcd()").body
+    run_func_stmt.body.append(write_vcd_call_stmt)
+    # define write_vcd()
+    write_vcd_func_code = """
+def write_vcd(self):
+    pass
+    """
+    write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
+    experiment_cls_stmt.body.append(write_vcd_func_stmt)
     return ast.unparse(code_mod)
 
 
