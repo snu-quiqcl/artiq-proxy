@@ -10,7 +10,7 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pydantic
 from fastapi import FastAPI
@@ -154,8 +154,6 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
         for attr in ("body", "handlers", "orelse", "finalbody"):
             if hasattr(stmt, attr):
                 setattr(stmt, attr, add_tracking_line(getattr(stmt, attr)))
-        if isinstance(stmt, ast.ExceptHandler):
-            stmt.body = add_tracking_line(stmt.body)
         modified_stmt_list.append(stmt)
     return modified_stmt_list
 
