@@ -2,7 +2,9 @@
 
 import json
 import logging
+import os
 import posixpath
+import shutil
 import time
 import asyncio
 from contextlib import asynccontextmanager
@@ -120,26 +122,36 @@ async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
     return current_queue
 
 
-@app.get("/experiment/code/")
-async def get_experiment_code(file: str) -> str:
-    """Gets code of the given experiment file and returns it.
-    
+@app.post("/experiment/delete/")
+async def delete_experiment(rid: int):
+    """Kills the run with the specified RID.
+
     Args:
-        file: The path of the experiment file.
+        rid: The run identifier value of the target experiment.
     """
-    full_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
-    with open(full_path, encoding="utf-8") as experiment_file:
-        code = experiment_file.read()
-    return code
+    remote = get_client("master_schedule")
+    remote.delete(rid)
+
+
+@app.post("/experiment/terminate/")
+async def request_termination_of_experiment(rid: int):
+    """Requests graceful termination of the run with the specified RID.
+
+    Args:
+        rid: The run identifier value of the target experiment.
+    """
+    remote = get_client("master_schedule")
+    remote.request_termination(rid)
 
 
 @app.get("/experiment/submit/")
-async def submit_experiment(
+async def submit_experiment(  # pylint: disable=too-many-arguments
     file: str,
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
-    timed: Optional[str] = None
+    timed: Optional[str] = None,
+    visualize: bool = False
 ) -> int:
     """Submits the given experiment file.
     
@@ -151,10 +163,20 @@ async def submit_experiment(
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
+        visualize: If True, the experiment file is modified for visualization.
+          The original file and vcd file are saved in the visualize path set in config.json.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    if visualize:
+        experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        with open(experiment_path, encoding="utf-8") as experiment_file:
+            _code = experiment_file.read()
+        # TODO(BECATRUE): The code will be modifed in #37.
+    else:
+        # TODO(BECATRUE): The exact experiment path will be assigned in #37.
+        pass
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
@@ -163,7 +185,17 @@ async def submit_experiment(
     }
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
-    return remote.submit(pipeline, expid, priority, due_date, False)
+    rid = remote.submit(pipeline, expid, priority, due_date, False)
+    if visualize:
+        visualize_dir_path = posixpath.join(
+            configs["master_path"],
+            configs["visualize_path"],
+            f"{rid}/"
+        )
+        os.makedirs(visualize_dir_path)
+        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
+        shutil.copyfile(experiment_path, copied_experiment_path)
+    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
