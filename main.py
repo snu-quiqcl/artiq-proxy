@@ -173,6 +173,24 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     return rid
 
 
+@app.get("/experiment/running/")
+async def get_running_experiment() -> Optional[int]:
+    """Gets the running experiment RID.
+
+    It assumes that there is at most one running experiment.
+    
+    Returns:
+        The run identifier of the running experiment.
+        If no running experiment, it returns None.
+    """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    for rid, info in status.items():
+        if info["status"] == "running":
+            return rid
+    return None
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
