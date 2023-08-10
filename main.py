@@ -97,6 +97,28 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
+@app.post("/experiment/delete/")
+async def delete_experiment(rid: int):
+    """Kills the run with the specified RID.
+
+    Args:
+        rid: The run identifier value of the target experiment.
+    """
+    remote = get_client("master_schedule")
+    remote.delete(rid)
+
+
+@app.post("/experiment/terminate/")
+async def request_termination_of_experiment(rid: int):
+    """Requests graceful termination of the run with the specified RID.
+
+    Args:
+        rid: The run identifier value of the target experiment.
+    """
+    remote = get_client("master_schedule")
+    remote.request_termination(rid)
+
+
 @app.get("/experiment/submit/")
 async def submit_experiment(  # pylint: disable=too-many-arguments
     file: str,
