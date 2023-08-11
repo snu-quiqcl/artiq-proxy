@@ -6,6 +6,7 @@ import os
 import posixpath
 import shutil
 import time
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -95,6 +96,30 @@ async def get_experiment_info(file: str) -> Any:
     """
     remote = get_client("master_experiment_db")
     return remote.examine(file)
+
+
+previous_queue = {}
+
+
+@app.get("/experiment/queue/")
+async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
+    """Gets the list of queued experiment and returns it.
+
+    Returns:
+        A dictionary of queued experiments with rid as their keys.
+        The value of each corresponding rid is a dictionary with several information:
+          "priority", "status", "due_date", "pipeline", "expid", etc.
+        It includes the running experiment with different "status" value.
+    """
+    remote = get_client("master_schedule")
+    current_queue = previous_queue
+    while current_queue == previous_queue:
+        await asyncio.sleep(0)
+        current_queue.clear()
+        current_queue.update(remote.get_status())
+    previous_queue.clear()
+    previous_queue.update(current_queue)
+    return current_queue
 
 
 @app.post("/experiment/delete/")
