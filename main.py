@@ -267,14 +267,13 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
             modified_experiment_file.write(modified_code)
         submission_file_path = modified_experiment_path
     else:
-        # TODO(BECATRUE): The exact experiment path will be assigned in #37.
-        pass
+        submission_file_path = posixpath.join(configs["repository_path"], file)
     args_dict = json.loads(args)
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
         "arguments": args_dict,
-        "file": posixpath.join(configs["repository_path"], file)
+        "file": submission_file_path
     }
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
