@@ -209,12 +209,16 @@ def write_vcd(self):
     result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
                             capture_output=True, shell=True, text=True)
     rid = int(result.stdout)
+    device_db_path = posixpath.join(
+        "{configs["master_path"]}",
+        "device_db.py"
+    )
     vcd_path = posixpath.join(
         "{configs["master_path"]}",
         "{configs["visualize_path"]}",
         f"{{rid}}/rtio.log"
     )
-    subprocess.run("artiq_coreanalyzer -w f'{{vcd_path}}'",
+    subprocess.run("artiq_coreanalyzer --device-db f'{{device_db_path}}' -w f'{{vcd_path}}'",
                    capture_output=True, shell=True)
     """
     write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
