@@ -146,6 +146,16 @@ async def request_termination_of_experiment(rid: int):
 
 
 def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
+    """Modifies the given statements list to leave rtio logs that track each line.
+
+    Adds logs containing the corresponding line number before each line, recursively.
+
+    Args:
+        stmt_list: The list of ast statements.
+
+    Returns:
+        The list of modified ast statements.
+    """
     modified_stmt_list = []
     for stmt in stmt_list:
         tracking_line_code = f"rtio_log('line', {stmt.lineno})"
@@ -158,7 +168,20 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
     return modified_stmt_list
 
 
-def modify_experiment_code(code: str, experiment_cls_name: str):
+def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
+    """Modifies the given code to leave rtio logs and make the vcd file.
+
+    It performs the following modifications:
+        1. Add the rtio logs to track each line.
+        2. Make the vcd file into the corresponding path.
+
+    Args:
+        code: The experiment code.
+        experiment_cls_name: The class name of the experiment.
+
+    Returns:
+        The modified experiment code.
+    """
     code_mod = ast.parse(code)
     # import modules
     import_code = """
