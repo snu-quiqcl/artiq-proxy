@@ -228,11 +228,24 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
         The run identifier, an integer which is incremented at each experiment submission.
     """
     if visualize:
+        visualize_dir_path = posixpath.join(
+            configs["master_path"],
+            configs["visualize_path"],
+            f"{rid}/"
+        )
+        os.makedirs(visualize_dir_path)
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        # copy the original experiment file
+        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
+        shutil.copyfile(experiment_path, copied_experiment_path)
+        # modify the experiment code
         with open(experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
         modified_code = modify_experiment_code(code, cls)
-        print(modified_code)
+        # save the modified experiment code
+        modified_experiment_path = posixpath.join(visualize_dir_path, "modified_experiment.py")
+        with open(modified_experiment_path, "w", encoding="utf-8") as modified_experiment_file:
+            modified_experiment_file.write(modified_code)
     else:
         # TODO(BECATRUE): The exact experiment path will be assigned in #37.
         pass
@@ -247,14 +260,6 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
     if visualize:
-        visualize_dir_path = posixpath.join(
-            configs["master_path"],
-            configs["visualize_path"],
-            f"{rid}/"
-        )
-        os.makedirs(visualize_dir_path)
-        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
-        shutil.copyfile(experiment_path, copied_experiment_path)
         metadata = {
             "file": experiment_path,
             "args": args_dict,
