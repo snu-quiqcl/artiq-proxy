@@ -218,7 +218,7 @@ def write_vcd(self):
         "{configs["visualize_path"]}",
         f"{{rid}}/rtio.log"
     )
-    subprocess.run("artiq_coreanalyzer --device-db f'{{device_db_path}}' -w f'{{vcd_path}}'",
+    subprocess.run(f"artiq_coreanalyzer --device-db {{device_db_path}} -w {{vcd_path}}",
                    capture_output=True, shell=True)
     """
     write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
