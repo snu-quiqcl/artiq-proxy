@@ -201,7 +201,7 @@ import posixpath
     # make logs to track each line
     run_func_stmt.body = add_tracking_line(run_func_stmt.body)
     # call write_vcd()
-    write_vcd_call_stmt = ast.parse("write_vcd()").body
+    write_vcd_call_stmt = ast.parse("self.write_vcd()").body
     run_func_stmt.body.append(write_vcd_call_stmt)
     # define write_vcd()
     write_vcd_func_code = f"""
