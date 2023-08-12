@@ -216,7 +216,7 @@ def write_vcd(self):
     vcd_path = posixpath.join(
         "{configs["master_path"]}",
         "{configs["visualize_path"]}",
-        f"{{rid}}/rtio.log"
+        f"{{rid}}/rtio.vcd"
     )
     subprocess.run(f"artiq_coreanalyzer --device-db {{device_db_path}} -w {{vcd_path}}",
                    capture_output=True, shell=True)
