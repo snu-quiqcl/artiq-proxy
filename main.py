@@ -251,24 +251,21 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
         The run identifier, an integer which is incremented at each experiment submission.
     """
     if visualize:
-        visualize_dir_path = posixpath.join(
-            configs["master_path"],
-            configs["visualize_path"],
-            f"{rid}/"
-        )
-        os.makedirs(visualize_dir_path)
+        submission_time = datetime.now().isoformat(timespec="seconds")
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
-        # copy the original experiment file
-        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
-        shutil.copyfile(experiment_path, copied_experiment_path)
+        visualize_dir_path = posixpath.join(configs["master_path"], configs["visualize_path"])
+        modified_experiment_path = posixpath.join(
+            visualize_dir_path,
+            f"experiment_{submission_time}.py"
+        )
         # modify the experiment code
         with open(experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
         modified_code = modify_experiment_code(code, cls)
         # save the modified experiment code
-        modified_experiment_path = posixpath.join(visualize_dir_path, "modified_experiment.py")
         with open(modified_experiment_path, "w", encoding="utf-8") as modified_experiment_file:
             modified_experiment_file.write(modified_code)
+        submission_file_path = modified_experiment_path
     else:
         # TODO(BECATRUE): The exact experiment path will be assigned in #37.
         pass
@@ -283,15 +280,16 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
     if visualize:
+        rid_dir_path = posixpath.join(visualize_dir_path, f"{rid}/")
+        os.makedirs(rid_dir_path)
+        # copy the original experiment file
+        copied_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
+        shutil.copyfile(experiment_path, copied_experiment_path)
+        # save the metadata
         metadata = {
-            "file": experiment_path,
-            "args": args_dict,
-            "pipeline": pipeline,
-            "priority": priority,
-            "timed": timed,
-            "submission_time": datetime.now().isoformat(timespec="seconds")
+            "submission_time": submission_time
         }
-        metadata_path = posixpath.join(visualize_dir_path, "metadata.json")
+        metadata_path = posixpath.join(rid_dir_path, "metadata.json")
         with open(metadata_path, "w", encoding="utf-8") as metadata_file:
             json.dump(metadata, metadata_file)
     return rid
