@@ -10,7 +10,7 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import pydantic
 from fastapi import FastAPI
@@ -227,7 +227,7 @@ def write_vcd(self):
 
 
 @app.get("/experiment/submit/")
-async def submit_experiment(  # pylint: disable=too-many-arguments
+async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-locals
     file: str,
     args: str = "{}",
     pipeline: str = "main",
