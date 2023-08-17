@@ -150,6 +150,7 @@ def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
     """Returns the statements list created to leave rtio logs that track each line.
 
     Adds logs containing the corresponding line number before each line, recursively.
+    The given statements list is not modified.
 
     Args:
         stmt_list: The list of ast statements.
