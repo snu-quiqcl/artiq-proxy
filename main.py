@@ -184,16 +184,16 @@ def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
     Returns:
         The modified experiment code.
     """
-    code_mod = ast.parse(code)
+    mod = ast.parse(code)
     # import modules
     import_code = """
 import subprocess
 import posixpath
     """
     import_stmt = ast.parse(import_code).body
-    code_mod.body = import_stmt + code_mod.body
+    mod.body = import_stmt + mod.body
     experiment_cls_stmt = next(
-        stmt for stmt in code_mod.body
+        stmt for stmt in mod.body
         if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
     )
     run_func_stmt = next(
@@ -225,7 +225,7 @@ def write_vcd(self):
     """
     write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
     experiment_cls_stmt.body.append(write_vcd_func_stmt)
-    return ast.unparse(code_mod)
+    return ast.unparse(mod)
 
 
 @app.get("/experiment/submit/")
