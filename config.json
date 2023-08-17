@@ -1,5 +1,5 @@
 {
     "master_path": "/home/rabi/artiq/",
     "repository_path": "repository/",
-    "visualize_path": "visualize/"
+    "result_path": "results/"
 }
