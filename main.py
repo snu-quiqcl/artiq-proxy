@@ -27,6 +27,7 @@ def load_config_file():
       {
         "master_path": {master_path}
         "repository_path": {repository_path}
+        "result_path": {result_path}
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
