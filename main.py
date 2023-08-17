@@ -216,7 +216,7 @@ def write_vcd(self):
     )
     vcd_path = posixpath.join(
         "{configs["master_path"]}",
-        "{configs["visualize_path"]}",
+        "{configs["result_path"]}",
         f"{{rid}}/rtio.vcd"
     )
     subprocess.run(f"artiq_coreanalyzer --device-db {{device_db_path}} -w {{vcd_path}}",
@@ -256,11 +256,11 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
         The run identifier, an integer which is incremented at each experiment submission.
     """
     submission_time = datetime.now().isoformat(timespec="seconds")
-    visualize_dir_path = posixpath.join(configs["master_path"], configs["visualize_path"])
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     if visualize:
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
         modified_experiment_path = posixpath.join(
-            visualize_dir_path,
+            result_dir_path,
             f"experiment_{submission_time}.py"
         )
         # modify the experiment code
@@ -284,7 +284,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
     # make the RID directory
-    rid_dir_path = posixpath.join(visualize_dir_path, f"{rid}/")
+    rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
     os.makedirs(rid_dir_path)
     # save the metadata
     metadata = {
