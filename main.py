@@ -254,10 +254,10 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    submission_time = datetime.now().isoformat(timespec="seconds")
+    visualize_dir_path = posixpath.join(configs["master_path"], configs["visualize_path"])
     if visualize:
-        submission_time = datetime.now().isoformat(timespec="seconds")
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
-        visualize_dir_path = posixpath.join(configs["master_path"], configs["visualize_path"])
         modified_experiment_path = posixpath.join(
             visualize_dir_path,
             f"experiment_{submission_time}.py"
@@ -282,19 +282,20 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
+    # make the RID directory
+    rid_dir_path = posixpath.join(visualize_dir_path, f"{rid}/")
+    os.makedirs(rid_dir_path)
+    # save the metadata
+    metadata = {
+        "submission_time": submission_time
+    }
+    metadata_path = posixpath.join(rid_dir_path, "metadata.json")
+    with open(metadata_path, "w", encoding="utf-8") as metadata_file:
+        json.dump(metadata, metadata_file)
     if visualize:
-        rid_dir_path = posixpath.join(visualize_dir_path, f"{rid}/")
-        os.makedirs(rid_dir_path)
         # copy the original experiment file
         copied_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
         shutil.copyfile(experiment_path, copied_experiment_path)
-        # save the metadata
-        metadata = {
-            "submission_time": submission_time
-        }
-        metadata_path = posixpath.join(rid_dir_path, "metadata.json")
-        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
-            json.dump(metadata, metadata_file)
     return rid
 
 
