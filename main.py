@@ -177,6 +177,8 @@ def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
         1. Add the rtio logs to track each line.
         2. Make the vcd file into the corresponding path.
 
+    It assumes that the code contains an experiment class and run() method.
+
     Args:
         code: The experiment code.
         experiment_cls_name: The class name of the experiment.
