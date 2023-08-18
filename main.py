@@ -315,7 +315,13 @@ async def get_running_experiment() -> Optional[int]:
 
 @app.get("/result/")
 async def list_result_directory() -> List[str]:
-    pass
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    last_rid_path = posixpath.join(result_dir_path, "rid.json")
+    try:
+        with open(last_rid_path, encoding="utf-8") as last_rid_file:
+            last_rid = json.load(last_rid_file)
+    except FileNotFoundError:
+        last_rid = -1
 
 
 def get_client(target_name: str) -> rpc.Client:
