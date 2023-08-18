@@ -313,6 +313,10 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
+def organize_result_directory():
+    pass
+
+
 @app.get("/result/")
 async def list_result_directory() -> List[str]:
     # read the most recently fetched RID
@@ -323,6 +327,11 @@ async def list_result_directory() -> List[str]:
             last_rid = json.load(last_rid_file)
     except FileNotFoundError:
         last_rid = -1
+    # navigate to each RID directory
+    for item in os.listdir(result_dir_path):
+        item_path = posixpath.join(result_dir_path, item)
+        if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
+            pass
 
 
 def get_client(target_name: str) -> rpc.Client:
