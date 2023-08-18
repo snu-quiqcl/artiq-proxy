@@ -313,6 +313,11 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
+@app.get("/result/")
+async def list_result_directory() -> List[str]:
+    pass
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
