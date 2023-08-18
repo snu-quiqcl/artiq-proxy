@@ -315,6 +315,7 @@ async def get_running_experiment() -> Optional[int]:
 
 @app.get("/result/")
 async def list_result_directory() -> List[str]:
+    # read the most recently fetched RID
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     last_rid_path = posixpath.join(result_dir_path, "rid.json")
     try:
