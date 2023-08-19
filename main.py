@@ -1,6 +1,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import h5py
 import json
 import logging
 import os
@@ -313,8 +314,27 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
-def organize_result_directory(rid: str):
-    pass
+def organize_result_directory(result_dir_path: str, rid: str):
+    rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+    # read the metadata
+    metadata_path = posixpath.join(rid_dir_path, "metadata.json")
+    with open(metadata_path, encoding="utf-8") as metadata_file:
+        metadata = json.load(metadata_file)
+    # find the result file
+    submission_time = datetime.fromisoformat(metadata["submission_time"])
+    date = submission_time.date().isoformat()
+    hour = submission_time.hour
+    datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
+    padded_rid = rid.zfill(9)
+    for item in os.listdir(datetime_result_dir_path):
+        if item.startswith(padded_rid):
+            break
+    else:  # no result file
+        return
+    # copy the result file to the RID directory
+    item_path = posixpath.join(datetime_result_dir_path, item)
+    result_path = posixpath.join(rid_dir_path, "result.h5")
+    shutil.copyfile(item_path, result_path)
 
 
 @app.get("/result/")
@@ -331,7 +351,8 @@ async def list_result_directory() -> List[str]:
     for item in os.listdir(result_dir_path):
         item_path = posixpath.join(result_dir_path, item)
         if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
-            organize_result_directory(item)
+            organize_result_directory(result_dir_path, item)
+    return []
 
 
 def get_client(target_name: str) -> rpc.Client:
