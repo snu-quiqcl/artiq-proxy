@@ -313,7 +313,7 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
-def organize_result_directory():
+def organize_result_directory(rid: str):
     pass
 
 
@@ -331,7 +331,7 @@ async def list_result_directory() -> List[str]:
     for item in os.listdir(result_dir_path):
         item_path = posixpath.join(result_dir_path, item)
         if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
-            pass
+            organize_result_directory(item)
 
 
 def get_client(target_name: str) -> rpc.Client:
