@@ -321,7 +321,8 @@ def organize_result_directory(result_dir_path: str, rid: str):
     with open(metadata_path, encoding="utf-8") as metadata_file:
         metadata = json.load(metadata_file)
     # find the result file
-    submission_time = datetime.fromisoformat(metadata["submission_time"])
+    submission_time_str = metadata["submission_time"]
+    submission_time = datetime.fromisoformat(submission_time_str)
     date = submission_time.date().isoformat()
     hour = submission_time.hour
     datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
@@ -335,6 +336,12 @@ def organize_result_directory(result_dir_path: str, rid: str):
     item_path = posixpath.join(datetime_result_dir_path, item)
     result_path = posixpath.join(rid_dir_path, "result.h5")
     shutil.copyfile(item_path, result_path)
+    # modify the result file
+    with h5py.File(result_path, "a") as result_file:
+        submission_time_dataset = result_file.create_dataset(
+            "submission_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        submission_time_dataset[0] = submission_time_str
 
 
 @app.get("/result/")
