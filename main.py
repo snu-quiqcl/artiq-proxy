@@ -6,6 +6,7 @@ import os
 import posixpath
 import shutil
 import time
+import copy
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -112,7 +113,7 @@ async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
         It includes the running experiment with different "status" value.
     """
     remote = get_client("master_schedule")
-    current_queue = previous_queue
+    current_queue = copy.deepcopy(previous_queue)
     while current_queue == previous_queue:
         await asyncio.sleep(0)
         current_queue.clear()
