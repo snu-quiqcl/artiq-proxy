@@ -363,6 +363,7 @@ def organize_result_directory(result_dir_path: str, rid: str):
 
 @app.get("/result/")
 async def list_result_directory() -> List[str]:
+    rid_list = []
     # read the most recently fetched RID
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     last_rid_path = posixpath.join(result_dir_path, "rid.json")
@@ -374,9 +375,11 @@ async def list_result_directory() -> List[str]:
     # navigate to each RID directory
     for item in os.listdir(result_dir_path):
         item_path = posixpath.join(result_dir_path, item)
+        # find a RID directory
         if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
             organize_result_directory(result_dir_path, item)
-    return []
+            rid_list.append(int(item))
+    return rid_list
 
 
 def get_client(target_name: str) -> rpc.Client:
