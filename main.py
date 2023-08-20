@@ -315,6 +315,18 @@ async def get_running_experiment() -> Optional[int]:
 
 
 def organize_result_directory(result_dir_path: str, rid: str):
+    """Organizes the result directory.
+    
+    It performs the following:
+        1. Read the metadata file from the RID directory and remove it.
+        2. Move the modified experiment to the RID directory.
+        3. Find the h5 result file and copy it to the RID directory.
+        4. Dump the metadata on the copied result file.
+
+    Args:
+        result_dir_path: The full path of the result directory.
+        rid: The RID string.
+    """
     rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
     # read and remove the metadata
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
