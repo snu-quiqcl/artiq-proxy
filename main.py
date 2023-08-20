@@ -379,6 +379,10 @@ async def list_result_directory() -> List[str]:
         if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
             organize_result_directory(result_dir_path, item)
             rid_list.append(int(item))
+    # update the most recently fetched RID
+    last_rid = max(rid_list)
+    with open(last_rid_path, "w", encoding="utf-8") as last_rid_file:
+        json.dump(last_rid, last_rid_file)
     return rid_list
 
 
