@@ -375,12 +375,14 @@ async def list_result_directory() -> List[str]:
     # navigate to each RID directory
     for item in os.listdir(result_dir_path):
         item_path = posixpath.join(result_dir_path, item)
-        # find a RID directory
-        if posixpath.isdir(item_path) and item.isdigit() and int(item) > last_rid:
-            organize_result_directory(result_dir_path, item)
-            rid_list.append(int(item))
+        if posixpath.isdir(item_path) and item.isdigit():  # find a RID directory
+            rid = int(item)
+            if rid > last_rid:
+                organize_result_directory(result_dir_path, item)
+            rid_list.append(rid)
     # update the most recently fetched RID
-    last_rid = max(rid_list)
+    rid_list.sort()
+    last_rid = rid_list[-1] if rid_list else -1
     with open(last_rid_path, "w", encoding="utf-8") as last_rid_file:
         json.dump(last_rid, last_rid_file)
     return rid_list
