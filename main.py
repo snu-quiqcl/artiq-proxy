@@ -321,11 +321,15 @@ def organize_result_directory(result_dir_path: str, rid: str):
     with open(metadata_path, encoding="utf-8") as metadata_file:
         metadata = json.load(metadata_file)
     os.remove(metadata_path)
-    # find the result file
     submission_time_str = metadata["submission_time"]
     submission_time = datetime.fromisoformat(submission_time_str)
     date = submission_time.date().isoformat()
     hour = submission_time.hour
+    # move the modified experiment file to the RID directory
+    experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
+    moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
+    shutil.move(experiment_path, moved_experiment_path)
+    # find the result file
     datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
     padded_rid = rid.zfill(9)
     for item in os.listdir(datetime_result_dir_path):
@@ -334,11 +338,11 @@ def organize_result_directory(result_dir_path: str, rid: str):
     else:  # no result file
         return
     # copy the result file to the RID directory
-    item_path = posixpath.join(datetime_result_dir_path, item)
-    result_path = posixpath.join(rid_dir_path, "result.h5")
-    shutil.copyfile(item_path, result_path)
+    result_path = posixpath.join(datetime_result_dir_path, item)
+    copied_result_path = posixpath.join(rid_dir_path, "result.h5")
+    shutil.copyfile(result_path, copied_result_path)
     # modify the result file
-    with h5py.File(result_path, "a") as result_file:
+    with h5py.File(copied_result_path, "a") as result_file:
         submission_time_dataset = result_file.create_dataset(
             "submission_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
         )
