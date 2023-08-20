@@ -316,10 +316,11 @@ async def get_running_experiment() -> Optional[int]:
 
 def organize_result_directory(result_dir_path: str, rid: str):
     rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
-    # read the metadata
+    # read and remove the metadata
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
     with open(metadata_path, encoding="utf-8") as metadata_file:
         metadata = json.load(metadata_file)
+    os.remove(metadata_path)
     # find the result file
     submission_time_str = metadata["submission_time"]
     submission_time = datetime.fromisoformat(submission_time_str)
