@@ -315,7 +315,7 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
-def organize_result_directory(result_dir_path: str, rid: str):
+def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     """Organizes the result directory.
     
     It performs the following:
@@ -327,22 +327,20 @@ def organize_result_directory(result_dir_path: str, rid: str):
     Args:
         result_dir_path: The full path of the result directory.
         rid: The RID string.
+
+    Returns:
+        True if the h5 result file exists.
+        Otherwise, stop organizing the result directory and return False. 
     """
     rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
     # read and remove the metadata
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
     with open(metadata_path, encoding="utf-8") as metadata_file:
         metadata = json.load(metadata_file)
-    os.remove(metadata_path)
     submission_time_str, visualize = metadata["submission_time"], metadata["visualize"]
     submission_time = datetime.fromisoformat(submission_time_str)
     date = submission_time.date().isoformat()
     hour = submission_time.hour
-    # move the modified experiment file to the RID directory
-    if visualize:
-        experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
-        moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
-        shutil.move(experiment_path, moved_experiment_path)
     # find the result file
     datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
     padded_rid = rid.zfill(9)
@@ -350,7 +348,7 @@ def organize_result_directory(result_dir_path: str, rid: str):
         if item.startswith(padded_rid):
             break
     else:  # no result file
-        return
+        return False
     # copy the result file to the RID directory
     result_path = posixpath.join(datetime_result_dir_path, item)
     copied_result_path = posixpath.join(rid_dir_path, "result.h5")
@@ -363,6 +361,14 @@ def organize_result_directory(result_dir_path: str, rid: str):
         submission_time_dataset[0] = submission_time_str
         visualize_dataset = result_file.create_dataset("visualize", (1,), dtype="bool")
         visualize_dataset[0] = visualize
+    # move the modified experiment file to the RID directory
+    if visualize:
+        experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
+        moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
+        shutil.move(experiment_path, moved_experiment_path)
+    # remove the metadata file
+    os.remove(metadata_path)
+    return True
 
 
 @app.get("/result/")
@@ -381,9 +387,11 @@ async def list_result_directory() -> List[int]:
         item_path = posixpath.join(result_dir_path, item)
         if posixpath.isdir(item_path) and item.isdigit():  # find a RID directory
             rid = int(item)
-            if rid > last_rid:
-                organize_result_directory(result_dir_path, item)
-            rid_list.append(rid)
+            if rid <= last_rid:  # alraedy organized
+                rid_list.append(rid)
+                continue
+            if organize_result_directory(result_dir_path, item):
+                rid_list.append(rid)
     # update the most recently fetched RID
     rid_list.sort()
     last_rid = rid_list[-1] if rid_list else -1
