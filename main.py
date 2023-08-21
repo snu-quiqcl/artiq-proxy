@@ -339,9 +339,10 @@ def organize_result_directory(result_dir_path: str, rid: str):
     date = submission_time.date().isoformat()
     hour = submission_time.hour
     # move the modified experiment file to the RID directory
-    experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
-    moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
-    shutil.move(experiment_path, moved_experiment_path)
+    if visualize:
+        experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
+        moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
+        shutil.move(experiment_path, moved_experiment_path)
     # find the result file
     datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
     padded_rid = rid.zfill(9)
@@ -365,7 +366,7 @@ def organize_result_directory(result_dir_path: str, rid: str):
 
 
 @app.get("/result/")
-async def list_result_directory() -> List[str]:
+async def list_result_directory() -> List[int]:
     rid_list = []
     # read the most recently fetched RID
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
