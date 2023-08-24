@@ -188,11 +188,7 @@ def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
     """
     mod = ast.parse(code)
     # import modules
-    import_code = """
-import subprocess
-import posixpath
-    """
-    import_stmt = ast.parse(import_code).body
+    import_stmt = ast.parse("import subprocess").body
     mod.body = import_stmt + mod.body
     experiment_cls_stmt = next(
         stmt for stmt in mod.body
@@ -208,21 +204,18 @@ import posixpath
     write_vcd_call_stmt = ast.parse("self.write_vcd()").body
     run_func_stmt.body.append(write_vcd_call_stmt)
     # define write_vcd()
+    device_db_path = posixpath.join(configs["master_path"], "device_db.py")
     write_vcd_func_code = f"""
 def write_vcd(self):
     result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
                             capture_output=True, shell=True, text=True)
     rid = int(result.stdout)
-    device_db_path = posixpath.join(
-        "{configs["master_path"]}",
-        "device_db.py"
-    )
     vcd_path = posixpath.join(
         "{configs["master_path"]}",
         "{configs["result_path"]}",
         f"{{rid}}/rtio.vcd"
     )
-    subprocess.run(f"artiq_coreanalyzer --device-db {{device_db_path}} -w {{vcd_path}}",
+    subprocess.run(f"artiq_coreanalyzer --device-db {device_db_path} -w {{vcd_path}}",
                    capture_output=True, shell=True)
     """
     write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
