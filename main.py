@@ -147,7 +147,7 @@ async def request_termination_of_experiment(rid: int):
 
 
 def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
-    """Returns the statements list created to leave rtio logs that track each line.
+    """Returns a new statements list interleaved with rtio logs for tracking each line.
 
     Adds logs containing the corresponding line number before each line, recursively.
     The given statements list is not modified.
