@@ -87,13 +87,13 @@ class RoutingTest(unittest.TestCase):
                 self.assertEqual(response.json(), queue)
 
     def test_delete_experiment(self):
-        test_rid = 2**31 - 1
+        test_rid = 1
         with TestClient(main.app) as client:
             client.post("/experiment/delete/", params={"rid": test_rid})
             self.mocked_client.delete.assert_called_with(test_rid)
 
     def test_request_termination_of_experiment(self):
-        test_rid = 2**31 - 1
+        test_rid = 1
         with TestClient(main.app) as client:
             client.post("/experiment/terminate/", params={"rid": test_rid})
             self.mocked_client.request_termination.assert_called_with(test_rid)
