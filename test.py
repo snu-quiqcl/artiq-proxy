@@ -61,22 +61,24 @@ class RoutingTest(unittest.TestCase):
             )
 
     def test_get_experiment_queue(self):
-        test_queues = tuple({
-            '1': {
-                'pipeline': 'main',
-                'expid': {
-                    'log_level': 30,
-                    'class_name': None,
-                    'arguments': {'user': 'QuIQCL', 'time': 1.0, 'save': False, 'color': 'r'},
-                    'file': 'DIRECTORY-PATH'
-                },
-                'priority': 1,
-                'due_date': None,
-                'flush': False,
-                'status': status,
-                'repo_msg': None
-            }} for status in ['pending', 'preparing', 'running', 'run_done', 'analyzing', 'deleting']
-        )
+        test_queues = tuple()
+        for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]
+            test_queue += tuple({
+                "1": {
+                    "pipeline": "main",
+                    "expid": {
+                        "log_level": 30,
+                        "class_name": None,
+                        "arguments": {"user": "QuIQCL", "time": 1.0, "save": False, "color": "r"},
+                       "file": "DIRECTORY-PATH"
+                    },
+                    "priority": 1,
+                    "due_date": None,
+                    "flush": False,
+                    "status": status,
+                    "repo_msg": None
+                }
+            })
         with TestClient(main.app) as client:
             for queue in test_queues:
                 self.mocked_client.get_status.return_value = queue
