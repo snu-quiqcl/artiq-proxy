@@ -62,7 +62,7 @@ class RoutingTest(unittest.TestCase):
 
     def test_get_experiment_queue(self):
         test_queues = tuple()
-        for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]
+        for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]:
             test_queue += tuple({
                 "1": {
                     "pipeline": "main",
