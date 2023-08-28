@@ -4,6 +4,7 @@ import json
 import logging
 import posixpath
 import time
+import copy
 import unittest
 from datetime import datetime
 from unittest import mock
@@ -61,30 +62,29 @@ class RoutingTest(unittest.TestCase):
             )
 
     def test_get_experiment_queue(self):
-        test_queues = tuple()
-        for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]:
-            test_queues += ({
-                "1": {
-                    "pipeline": "main",
-                    "expid": {
-                        "log_level": 30,
-                        "class_name": None,
-                        "arguments": {"user": "QuIQCL", "time": 1.0, "save": False, "color": "r"},
-                       "file": "DIRECTORY-PATH"
-                    },
-                    "priority": 1,
-                    "due_date": None,
-                    "flush": False,
-                    "status": status,
-                    "repo_msg": None
-                }
-            },)
+        test_queue = {
+            "1": {
+                "pipeline": "main",
+                "expid": {
+                    "log_level": 30,
+                    "class_name": None,
+                    "arguments": {"user": "QuIQCL", "time": 1.0, "save": False, "color": "r"},
+                   "file": "DIRECTORY-PATH"
+                },
+                "priority": 1,
+                "due_date": None,
+                "flush": False,
+                "status": None,
+                "repo_msg": None
+            }
+        }
         with TestClient(main.app) as client:
-            for queue in test_queues:
-                self.mocked_client.get_status.return_value = queue
+            for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]:
+                test_queue["1"]["status"] = status
+                self.mocked_client.get_status.return_value = copy.deepcopy(test_queue)
                 response = client.get("/experiment/queue/")
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.json(), queue)
+                self.assertEqual(response.json(), test_queue)
 
     def test_delete_experiment(self):
         test_rid = 1
