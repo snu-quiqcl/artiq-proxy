@@ -4,6 +4,7 @@ import json
 import logging
 import posixpath
 import time
+import copy
 import unittest
 from datetime import datetime
 from unittest import mock
@@ -59,6 +60,43 @@ class RoutingTest(unittest.TestCase):
                 response.json()["ExperimentClass"],
                 test_info["ExperimentClass"].model_dump()
             )
+
+    def test_get_experiment_queue(self):
+        test_queue = {
+            "1": {
+                "pipeline": "main",
+                "expid": {
+                    "log_level": 30,
+                    "class_name": None,
+                    "arguments": {"user": "QuIQCL", "time": 1.0, "save": False, "color": "r"},
+                   "file": "DIRECTORY-PATH"
+                },
+                "priority": 1,
+                "due_date": None,
+                "flush": False,
+                "status": None,
+                "repo_msg": None
+            }
+        }
+        with TestClient(main.app) as client:
+            for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]:
+                test_queue["1"]["status"] = status
+                self.mocked_client.get_status.return_value = copy.deepcopy(test_queue)
+                response = client.get("/experiment/queue/")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), test_queue)
+
+    def test_delete_experiment(self):
+        test_rid = 1
+        with TestClient(main.app) as client:
+            client.post("/experiment/delete/", params={"rid": test_rid})
+            self.mocked_client.delete.assert_called_with(test_rid)
+
+    def test_request_termination_of_experiment(self):
+        test_rid = 1
+        with TestClient(main.app) as client:
+            client.post("/experiment/terminate/", params={"rid": test_rid})
+            self.mocked_client.request_termination.assert_called_with(test_rid)
 
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
