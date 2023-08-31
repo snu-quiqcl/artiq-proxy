@@ -1,5 +1,6 @@
 """Proxy server to communicate a client to ARTIQ."""
 
+import ast
 import json
 import logging
 import os
@@ -27,6 +28,7 @@ def load_config_file():
       {
         "master_path": {master_path}
         "repository_path": {repository_path}
+        "result_path": {result_path}
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -145,14 +147,90 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
+def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
+    """Returns a new statements list interleaved with rtio logs for tracking each line.
+
+    Adds logs containing the corresponding line number before each line, recursively.
+    The given statements list is not modified.
+
+    Args:
+        stmt_list: The list of ast statements.
+
+    Returns:
+        The created list of ast statements.
+    """
+    modified_stmt_list = []
+    for stmt in stmt_list:
+        tracking_line_code = f"rtio_log('line', {stmt.lineno})"
+        tracking_line_stmt = ast.parse(tracking_line_code).body
+        modified_stmt_list.extend(tracking_line_stmt)
+        for attr in ("body", "handlers", "orelse", "finalbody"):
+            if hasattr(stmt, attr):
+                setattr(stmt, attr, add_tracking_line(getattr(stmt, attr)))
+        modified_stmt_list.append(stmt)
+    return modified_stmt_list
+
+
+def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
+    """Modifies the given code to leave rtio logs and make the vcd file.
+
+    It performs the following modifications:
+        1. Add the rtio logs to track each line.
+        2. Make the vcd file into the corresponding path.
+
+    It assumes that the code contains an experiment class and run() method.
+
+    Args:
+        code: The experiment code.
+        experiment_cls_name: The class name of the experiment.
+
+    Returns:
+        The modified experiment code.
+    """
+    mod = ast.parse(code)
+    # import modules
+    import_stmt = ast.parse("import subprocess").body
+    mod.body = import_stmt + mod.body
+    experiment_cls_stmt = next(
+        stmt for stmt in mod.body
+        if isinstance(stmt, ast.ClassDef) and stmt.name == experiment_cls_name
+    )
+    run_func_stmt = next(
+        stmt for stmt in experiment_cls_stmt.body
+        if isinstance(stmt, ast.FunctionDef) and stmt.name == "run"
+    )
+    # make logs to track each line
+    run_func_stmt.body = add_tracking_line(run_func_stmt.body)
+    # call write_vcd()
+    write_vcd_call_stmt = ast.parse("self.write_vcd()").body
+    run_func_stmt.body.append(write_vcd_call_stmt)
+    # define write_vcd()
+    device_db_path = posixpath.join(configs["master_path"], "device_db.py")
+    vcd_path = posixpath.join(configs["master_path"], configs["result_path"], "{rid}/rtio.vcd")
+    write_vcd_func_code = f"""
+def write_vcd(self):
+    result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
+                            capture_output=True, shell=True, text=True)
+    rid = int(result.stdout)
+    device_db_path = "{device_db_path}"
+    vcd_path = f"{vcd_path}"
+    subprocess.run(f"artiq_coreanalyzer --device-db {{device_db_path}} -w {{vcd_path}}",
+                   capture_output=True, shell=True)
+    """
+    write_vcd_func_stmt = ast.parse(write_vcd_func_code).body
+    experiment_cls_stmt.body.append(write_vcd_func_stmt)
+    return ast.unparse(mod)
+
+
 @app.get("/experiment/submit/")
-async def submit_experiment(  # pylint: disable=too-many-arguments
+async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-locals
     file: str,
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
     timed: Optional[str] = None,
-    visualize: bool = False
+    visualize: bool = False,
+    cls: str = ""
 ) -> int:
     """Submits the given experiment file.
     
@@ -166,35 +244,53 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
           None for no due date.
         visualize: If True, the experiment file is modified for visualization.
           The original file and vcd file are saved in the visualize path set in config.json.
+        cls: The class name of the experiment.
+          It is only necessary when the visualize argument is True.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    submission_time = datetime.now().isoformat(timespec="seconds")
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     if visualize:
         experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        modified_experiment_path = posixpath.join(
+            result_dir_path,
+            f"experiment_{submission_time}.py"
+        )
+        # modify the experiment code
         with open(experiment_path, encoding="utf-8") as experiment_file:
-            _code = experiment_file.read()
-        # TODO(BECATRUE): The code will be modifed in #37.
+            code = experiment_file.read()
+        modified_code = modify_experiment_code(code, cls)
+        # save the modified experiment code
+        with open(modified_experiment_path, "w", encoding="utf-8") as modified_experiment_file:
+            modified_experiment_file.write(modified_code)
+        submission_file_path = modified_experiment_path
     else:
-        # TODO(BECATRUE): The exact experiment path will be assigned in #37.
-        pass
+        submission_file_path = posixpath.join(configs["repository_path"], file)
+    args_dict = json.loads(args)
     expid = {
         "log_level": logging.WARNING,
         "class_name": None,
-        "arguments": json.loads(args),
-        "file": posixpath.join(configs["repository_path"], file)
+        "arguments": args_dict,
+        "file": submission_file_path
     }
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
+    # make the RID directory
+    rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+    os.makedirs(rid_dir_path)
+    # save the metadata
+    metadata = {
+        "submission_time": submission_time
+    }
+    metadata_path = posixpath.join(rid_dir_path, "metadata.json")
+    with open(metadata_path, "w", encoding="utf-8") as metadata_file:
+        json.dump(metadata, metadata_file)
     if visualize:
-        visualize_dir_path = posixpath.join(
-            configs["master_path"],
-            configs["visualize_path"],
-            f"{rid}/"
-        )
-        os.makedirs(visualize_dir_path)
-        copied_experiment_path = posixpath.join(visualize_dir_path, "experiment.py")
+        # copy the original experiment file
+        copied_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
         shutil.copyfile(experiment_path, copied_experiment_path)
     return rid
 
