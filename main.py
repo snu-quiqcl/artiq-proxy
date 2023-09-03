@@ -352,11 +352,11 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     else:  # no result file
         return False
     # copy the result file to the RID directory
-    result_path = posixpath.join(datetime_result_dir_path, item)
-    copied_result_path = posixpath.join(rid_dir_path, "result.h5")
-    shutil.copyfile(result_path, copied_result_path)
+    src_result_path = posixpath.join(datetime_result_dir_path, item)
+    dst_result_path = posixpath.join(rid_dir_path, "result.h5")
+    shutil.copyfile(src_result_path, dst_result_path)
     # modify the result file
-    with h5py.File(copied_result_path, "a") as result_file:
+    with h5py.File(dst_result_path, "a") as result_file:
         submission_time_dataset = result_file.create_dataset(
             "submission_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
         )
