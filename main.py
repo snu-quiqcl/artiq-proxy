@@ -397,10 +397,10 @@ async def list_result_directory() -> List[int]:
         # find a RID directory not organized yet
         if posixpath.isdir(item_path) and item.startswith("_") and item[1:].isdigit():
             rid = item[1:]
-            rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
-            shutil.move(item_path, rid_dir_path)
-            if organize_result_directory(result_dir_path, item):
-                rid_list.append(rid)
+            if organize_result_directory(result_dir_path, rid):
+                rid_list.append(int(rid))
+                rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+                shutil.move(item_path, rid_dir_path)
     rid_list.sort()
     return rid_list
 
