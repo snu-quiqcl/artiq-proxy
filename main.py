@@ -401,7 +401,7 @@ async def list_result_directory() -> List[int]:
         item_path = posixpath.join(result_dir_path, item)
         if posixpath.isdir(item_path) and item.isdigit():  # find a RID directory
             rid = int(item)
-            if rid <= last_rid:  # alraedy organized
+            if rid <= last_rid:  # already organized
                 rid_list.append(rid)
                 continue
             if organize_result_directory(result_dir_path, item):
