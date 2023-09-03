@@ -335,7 +335,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         Otherwise, stop organizing the result directory and return False. 
     """
     rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
-    # read and remove the metadata
+    # read the metadata
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
     with open(metadata_path, encoding="utf-8") as metadata_file:
         metadata = json.load(metadata_file)
