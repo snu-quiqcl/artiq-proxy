@@ -1,7 +1,6 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
-import h5py
 import json
 import logging
 import os
@@ -14,6 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import h5py
 import pydantic
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
@@ -315,6 +315,7 @@ async def get_running_experiment() -> Optional[int]:
     return None
 
 
+# pylint: disable=too-many-locals
 def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     """Organizes the result directory.
     
