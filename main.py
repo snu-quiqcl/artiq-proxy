@@ -380,14 +380,14 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
 
 @app.get("/result/")
 async def list_result_directory() -> List[int]:
-    """Post-processes the submitted experiments and returns the RID list.
+    """Post-processes the executed experiments and returns the RID list.
 
     It performs the following:
         1. Organize the result directory.
         2. Return the RID list.
 
     Returns:
-        A list with RIDs of the submitted experiments, sorted in an ascending order.
+        A list with RIDs of the executed experiments, sorted in an ascending order.
     """
     rid_list = []
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
