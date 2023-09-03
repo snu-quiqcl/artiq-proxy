@@ -254,13 +254,13 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     submission_time = datetime.now().isoformat(timespec="seconds")
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     if visualize:
-        experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        src_experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
         modified_experiment_path = posixpath.join(
             result_dir_path,
             f"experiment_{submission_time}.py"
         )
         # modify the experiment code
-        with open(experiment_path, encoding="utf-8") as experiment_file:
+        with open(src_experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
         modified_code = modify_experiment_code(code, cls)
         # save the modified experiment code
@@ -292,8 +292,8 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
         json.dump(metadata, metadata_file)
     if visualize:
         # copy the original experiment file
-        copied_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
-        shutil.copyfile(experiment_path, copied_experiment_path)
+        dst_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
+        shutil.copyfile(src_experiment_path, dst_experiment_path)
     return rid
 
 
@@ -365,9 +365,9 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         visualize_dataset[0] = visualize
     # move the modified experiment file to the RID directory
     if visualize:
-        experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
-        moved_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
-        shutil.move(experiment_path, moved_experiment_path)
+        src_experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
+        dst_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
+        shutil.move(src_experiment_path, dst_experiment_path)
     # remove the metadata file
     os.remove(metadata_path)
     return True
