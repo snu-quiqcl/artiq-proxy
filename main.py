@@ -328,7 +328,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
 
     Args:
         result_dir_path: The full path of the result directory.
-        rid: The RID string.
+        rid: The run identifier value of the experiment in string.
 
     Returns:
         True if the h5 result file exists.
