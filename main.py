@@ -324,6 +324,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         2. Move the modified experiment to the RID directory.
         3. Find the h5 result file and copy it to the RID directory.
         4. Dump the metadata on the copied result file.
+        5. Remove the metadata file.
 
     Args:
         result_dir_path: The full path of the result directory.
