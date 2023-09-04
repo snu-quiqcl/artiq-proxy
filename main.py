@@ -388,7 +388,9 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         visualize_dataset[0] = visualize
     # move the modified experiment file to the RID directory
     if visualize:
-        src_experiment_path = posixpath.join(result_dir_path, f"experiment_{submission_time_str}.py")
+        src_experiment_path = posixpath.join(
+            result_dir_path, f"experiment_{submission_time_str}.py"
+        )
         dst_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
         shutil.move(src_experiment_path, dst_experiment_path)
     # remove the metadata file
