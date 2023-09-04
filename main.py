@@ -251,7 +251,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
-    submission_time = datetime.now().isoformat(timespec="seconds")
+    submission_time = datetime.now().isoformat()
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     if visualize:
         src_experiment_path = posixpath.join(
@@ -336,13 +336,13 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         True if the h5 result file exists.
         Otherwise, stop organizing the result directory and return False. 
     """
-    rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+    rid_dir_path = posixpath.join(result_dir_path, f"_{rid}/")
     # read the metadata
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
     try:
         with open(metadata_path, encoding="utf-8") as metadata_file:
             metadata = json.load(metadata_file)
-    except OSError:
+    except OSError:  # no chance of happening
         return False
     submission_time_str, visualize = metadata["submission_time"], metadata["visualize"]
     submission_time = datetime.fromisoformat(submission_time_str)
@@ -354,7 +354,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     for item in os.listdir(datetime_result_dir_path):
         if item.startswith(padded_rid):
             break
-    else:  # no result file
+    else:  # the experiment has not yet been run
         return False
     # copy the result file to the RID directory
     src_result_path = posixpath.join(datetime_result_dir_path, item)
@@ -362,10 +362,28 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     shutil.copyfile(src_result_path, dst_result_path)
     # modify the result file
     with h5py.File(dst_result_path, "a") as result_file:
+        # start time
+        start_time = result_file["start_time"][()]
+        del result_file["start_time"]
+        start_time_str = datetime.fromtimestamp(start_time).isoformat()
+        start_time_dataset = result_file.create_dataset(
+            "start_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        start_time_dataset[0] = start_time_str
+        # run time
+        run_time = result_file["run_time"][()]
+        del result_file["run_time"]
+        run_time_str = datetime.fromtimestamp(run_time).isoformat()
+        run_time_dataset = result_file.create_dataset(
+            "run_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        run_time_dataset[0] = run_time_str
+        # submission time
         submission_time_dataset = result_file.create_dataset(
             "submission_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
         )
         submission_time_dataset[0] = submission_time_str
+        # visualize option
         visualize_dataset = result_file.create_dataset("visualize", (1,), dtype="bool")
         visualize_dataset[0] = visualize
     # move the modified experiment file to the RID directory
