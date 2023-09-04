@@ -417,7 +417,7 @@ async def list_result_directory() -> List[int]:
             rid = item[1:]
             if organize_result_directory(result_dir_path, rid):
                 rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
-                shutil.move(item_path, rid_dir_path)
+                os.rename(item_path, rid_dir_path)
     # find all organized RID directories
     rid_list = []
     for item in os.listdir(result_dir_path):
