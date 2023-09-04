@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import h5py
 import pydantic
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 
 logger = logging.getLogger(__name__)
@@ -429,6 +430,11 @@ async def list_result_directory() -> List[int]:
             rid_list.append(int(item))
     rid_list.sort()
     return rid_list
+
+
+@app.get("/result/{rid}/h5/")
+async def get_h5_result_file(rid: str) -> FileResponse:
+    return FileResponse("blah.file")
 
 
 def get_client(target_name: str) -> rpc.Client:
