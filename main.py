@@ -434,7 +434,15 @@ async def list_result_directory() -> List[int]:
 
 @app.get("/result/{rid}/h5/")
 async def get_h5_result_file(rid: str) -> FileResponse:
-    return FileResponse("blah.file")
+    """Gets the H5 format result file of the given RID and returns it.
+    
+    Args:
+        rid: The run identifier value in string.
+    """
+    h5_result_path = posixpath.join(
+        configs["master_path"], configs["result_path"], rid, "result.h5"
+    )
+    return FileResponse(h5_result_path)
 
 
 def get_client(target_name: str) -> rpc.Client:
