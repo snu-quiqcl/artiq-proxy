@@ -407,18 +407,21 @@ async def list_result_directory() -> List[int]:
     Returns:
         A list with RIDs of the executed experiments, sorted in an ascending order.
     """
-    rid_list = []
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
-    # navigate to each RID directory
+    # navigate to each RID directory not organized yet
     for item in os.listdir(result_dir_path):
         item_path = posixpath.join(result_dir_path, item)
-        # find a RID directory not organized yet
         if posixpath.isdir(item_path) and item.startswith("_") and item[1:].isdigit():
             rid = item[1:]
             if organize_result_directory(result_dir_path, rid):
-                rid_list.append(int(rid))
                 rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
                 shutil.move(item_path, rid_dir_path)
+    # find all organized RID directories
+    rid_list = []
+    for item in os.listdir(result_dir_path):
+        item_path = posixpath.join(result_dir_path, item)
+        if posixpath.isdir(item_path) and item.isdigit():
+            rid_list.append(int(item))
     rid_list.sort()
     return rid_list
 
