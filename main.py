@@ -11,6 +11,7 @@ import copy
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import h5py
@@ -432,17 +433,30 @@ async def list_result_directory() -> List[int]:
     return rid_list
 
 
-@app.get("/result/{rid}/h5/")
-async def get_h5_result_file(rid: str) -> FileResponse:
+class ResultFileType(str, Enum):
+    h5 = "h5"
+    code = "code"
+    vcd = "vcd"
+
+
+@app.get("/result/{rid}/{result_file_type}/")
+async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse:
     """Gets the H5 format result file of the given RID and returns it.
     
     Args:
         rid: The run identifier value in string.
+        result_file_type: The type of the requested result file in ResultFileType.
     """
-    h5_result_path = posixpath.join(
-        configs["master_path"], configs["result_path"], rid, "result.h5"
+    if result_file_type is ResultFileType.h5:
+        result_path = "result.h5"
+    elif result_file_type is ResultFileType.code:
+        result_path = "experiment.py"
+    else:
+        result_path = "rtio.vcd"
+    full_result_path = posixpath.join(
+        configs["master_path"], configs["result_path"], rid, result_path
     )
-    return FileResponse(h5_result_path)
+    return FileResponse(full_result_path)
 
 
 def get_client(target_name: str) -> rpc.Client:
