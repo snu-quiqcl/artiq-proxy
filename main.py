@@ -322,7 +322,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     """Organizes the result directory.
     
     It performs the following:
-        1. Read the metadata file from the RID directory and remove it.
+        1. Read the metadata file from the RID directory.
         2. Move the modified experiment to the RID directory.
         3. Find the h5 result file and copy it to the RID directory.
         4. Dump the metadata on the copied result file.
