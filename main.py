@@ -345,7 +345,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
         with open(metadata_path, encoding="utf-8") as metadata_file:
             metadata = json.load(metadata_file)
     except OSError:  # no chance of happening
-        logger.exception(f"The RID {rid} directory has no metadata file.")
+        logger.exception("The RID %s directory has no metadata file.", rid)
         return False
     submission_time_str, visualize = metadata["submission_time"], metadata["visualize"]
     submission_time = datetime.fromisoformat(submission_time_str)
