@@ -209,7 +209,7 @@ def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
     run_func_stmt.body.append(write_vcd_call_stmt)
     # define write_vcd()
     device_db_path = posixpath.join(configs["master_path"], "device_db.py")
-    vcd_path = posixpath.join(configs["master_path"], configs["result_path"], "{rid}/rtio.vcd")
+    vcd_path = posixpath.join(configs["master_path"], configs["result_path"], "_{rid}/rtio.vcd")
     write_vcd_func_code = f"""
 def write_vcd(self):
     result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
