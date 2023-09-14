@@ -21,6 +21,7 @@ jobs:
         pip install pylint
     - name: Add dependencies about external libraries
       run: |
+        pip install h5py
         pip install fastapi
         pip install git+https://github.com/m-labs/sipyco.git
     - name: Analyze the code with pylint

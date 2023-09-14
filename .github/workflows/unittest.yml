@@ -21,6 +21,7 @@ jobs:
         pip install coverage
     - name: Add dependencies about external libraries
       run: |
+        pip install h5py
         pip install fastapi
         pip install httpx
         pip install numpy

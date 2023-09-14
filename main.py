@@ -13,9 +13,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import h5py
 import pydantic
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
+
+logger = logging.getLogger(__name__)
 
 configs = {}
 
@@ -206,7 +209,7 @@ def modify_experiment_code(code: str, experiment_cls_name: str) -> str:
     run_func_stmt.body.append(write_vcd_call_stmt)
     # define write_vcd()
     device_db_path = posixpath.join(configs["master_path"], "device_db.py")
-    vcd_path = posixpath.join(configs["master_path"], configs["result_path"], "{rid}/rtio.vcd")
+    vcd_path = posixpath.join(configs["master_path"], configs["result_path"], "_{rid}/rtio.vcd")
     write_vcd_func_code = f"""
 def write_vcd(self):
     result = subprocess.run("curl http://127.0.0.1:8000/experiment/running/",
@@ -250,16 +253,18 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
-    submission_time = datetime.now().isoformat(timespec="seconds")
+    submission_time = datetime.now().isoformat()
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     if visualize:
-        experiment_path = posixpath.join(configs["master_path"], configs["repository_path"], file)
+        src_experiment_path = posixpath.join(
+            configs["master_path"], configs["repository_path"], file
+        )
         modified_experiment_path = posixpath.join(
             result_dir_path,
             f"experiment_{submission_time}.py"
         )
         # modify the experiment code
-        with open(experiment_path, encoding="utf-8") as experiment_file:
+        with open(src_experiment_path, encoding="utf-8") as experiment_file:
             code = experiment_file.read()
         modified_code = modify_experiment_code(code, cls)
         # save the modified experiment code
@@ -279,19 +284,20 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
     # make the RID directory
-    rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+    rid_dir_path = posixpath.join(result_dir_path, f"_{rid}/")
     os.makedirs(rid_dir_path)
     # save the metadata
     metadata = {
-        "submission_time": submission_time
+        "submission_time": submission_time,
+        "visualize": visualize
     }
     metadata_path = posixpath.join(rid_dir_path, "metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as metadata_file:
         json.dump(metadata, metadata_file)
     if visualize:
         # copy the original experiment file
-        copied_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
-        shutil.copyfile(experiment_path, copied_experiment_path)
+        dst_experiment_path = posixpath.join(rid_dir_path, "experiment.py")
+        shutil.copyfile(src_experiment_path, dst_experiment_path)
     return rid
 
 
@@ -311,6 +317,118 @@ async def get_running_experiment() -> Optional[int]:
         if info["status"] == "running":
             return rid
     return None
+
+
+# pylint: disable=too-many-locals
+def organize_result_directory(result_dir_path: str, rid: str) -> bool:
+    """Organizes the result directory.
+    
+    It performs the following:
+        1. Read the metadata file from the RID directory.
+        2. Move the modified experiment to the RID directory.
+        3. Find the h5 result file and copy it to the RID directory.
+        4. Dump the metadata on the copied result file.
+        5. Remove the metadata file.
+
+    Args:
+        result_dir_path: The full path of the result directory.
+        rid: The run identifier value of the experiment in string.
+
+    Returns:
+        True if the h5 result file exists.
+        Otherwise, stop organizing the result directory and return False. 
+    """
+    rid_dir_path = posixpath.join(result_dir_path, f"_{rid}/")
+    # read the metadata
+    metadata_path = posixpath.join(rid_dir_path, "metadata.json")
+    try:
+        with open(metadata_path, encoding="utf-8") as metadata_file:
+            metadata = json.load(metadata_file)
+    except OSError:  # no chance of happening
+        logger.exception("The RID %s directory has no metadata file.", rid)
+        return False
+    submission_time_str, visualize = metadata["submission_time"], metadata["visualize"]
+    submission_time = datetime.fromisoformat(submission_time_str)
+    date = submission_time.date().isoformat()
+    hour = submission_time.hour
+    # find the result file
+    datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
+    padded_rid = rid.zfill(9)
+    for item in os.listdir(datetime_result_dir_path):
+        if item.startswith(padded_rid):
+            break
+    else:  # the experiment has not yet been run
+        return False
+    # copy the result file to the RID directory
+    src_result_path = posixpath.join(datetime_result_dir_path, item)
+    dst_result_path = posixpath.join(rid_dir_path, "result.h5")
+    shutil.copyfile(src_result_path, dst_result_path)
+    # modify the result file
+    with h5py.File(dst_result_path, "a") as result_file:
+        # start time
+        start_time = result_file["start_time"][()]
+        del result_file["start_time"]
+        start_time_str = datetime.fromtimestamp(start_time).isoformat()
+        start_time_dataset = result_file.create_dataset(
+            "start_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        start_time_dataset[0] = start_time_str
+        # run time
+        run_time = result_file["run_time"][()]
+        del result_file["run_time"]
+        run_time_str = datetime.fromtimestamp(run_time).isoformat()
+        run_time_dataset = result_file.create_dataset(
+            "run_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        run_time_dataset[0] = run_time_str
+        # submission time
+        submission_time_dataset = result_file.create_dataset(
+            "submission_time", (1,), dtype=h5py.string_dtype(encoding="utf-8")
+        )
+        submission_time_dataset[0] = submission_time_str
+        # visualize option
+        visualize_dataset = result_file.create_dataset("visualize", (1,), dtype="bool")
+        visualize_dataset[0] = visualize
+    # move the modified experiment file to the RID directory
+    if visualize:
+        src_experiment_path = posixpath.join(
+            result_dir_path, f"experiment_{submission_time_str}.py"
+        )
+        dst_experiment_path = posixpath.join(rid_dir_path, "modified_experiment.py")
+        shutil.move(src_experiment_path, dst_experiment_path)
+    # remove the metadata file
+    os.remove(metadata_path)
+    return True
+
+
+@app.get("/result/")
+async def list_result_directory() -> List[int]:
+    """Post-processes the executed experiments and returns the RID list.
+
+    It performs the following:
+        1. Organize the result directory.
+        2. Return the RID list.
+
+    Returns:
+        A list with RIDs of the executed experiments, sorted in an ascending order.
+    """
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    # navigate to each RID directory not organized yet
+    for item in os.listdir(result_dir_path):
+        item_path = posixpath.join(result_dir_path, item)
+        if posixpath.isdir(item_path) and item.startswith("_") and item[1:].isdigit():
+            rid = item[1:]
+            if organize_result_directory(result_dir_path, rid):
+                rid_dir_path = posixpath.join(result_dir_path, f"{rid}/")
+                os.rename(item_path, rid_dir_path)
+    # find all organized RID directories
+    rid_list = []
+    for item in os.listdir(result_dir_path):
+        item_path = posixpath.join(result_dir_path, item)
+        if posixpath.isdir(item_path) and item.isdigit():
+            rid_list.append(int(item))
+    rid_list.sort()
+    return rid_list
 
 
 def get_client(target_name: str) -> rpc.Client:
