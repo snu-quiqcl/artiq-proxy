@@ -434,9 +434,15 @@ async def list_result_directory() -> List[int]:
 
 
 class ResultFileType(str, Enum):
-    h5 = "h5"
-    code = "code"
-    vcd = "vcd"
+    """Enum class for describing the result file type.
+    
+    H5: The H5 format result file, result.h5.
+    CODE: The original experiment file, experiment.py.
+    VCD: The VCD format file, rtio.vcd.
+    """
+    H5 = "h5"
+    CODE = "code"
+    VCD = "vcd"
 
 
 @app.get("/result/{rid}/{result_file_type}/")
@@ -447,9 +453,9 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
         rid: The run identifier value in string.
         result_file_type: The type of the requested result file in ResultFileType.
     """
-    if result_file_type is ResultFileType.h5:
+    if result_file_type is ResultFileType.H5:
         result_path = "result.h5"
-    elif result_file_type is ResultFileType.code:
+    elif result_file_type is ResultFileType.CODE:
         result_path = "experiment.py"
     else:
         result_path = "rtio.vcd"
