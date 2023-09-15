@@ -447,7 +447,7 @@ class ResultFileType(str, Enum):
 
 @app.get("/result/{rid}/{result_file_type}/")
 async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse:
-    """Gets the H5 format result file of the given RID and returns it.
+    """Gets the result file of the given RID for the given result file type and returns it.
     
     Args:
         rid: The run identifier value in string.
