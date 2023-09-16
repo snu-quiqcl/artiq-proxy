@@ -11,11 +11,13 @@ import copy
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import h5py
 import pydantic
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 
 logger = logging.getLogger(__name__)
@@ -429,6 +431,38 @@ async def list_result_directory() -> List[int]:
             rid_list.append(int(item))
     rid_list.sort()
     return rid_list
+
+
+class ResultFileType(str, Enum):
+    """Enum class for describing the result file type.
+    
+    H5: The H5 format result file, result.h5.
+    CODE: The original experiment file, experiment.py.
+    VCD: The VCD format file, rtio.vcd.
+    """
+    H5 = "h5"
+    CODE = "code"
+    VCD = "vcd"
+
+
+@app.get("/result/{rid}/{result_file_type}/")
+async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse:
+    """Gets the result file of the given RID for the given result file type and returns it.
+    
+    Args:
+        rid: The run identifier value in string.
+        result_file_type: The type of the requested result file in ResultFileType.
+    """
+    if result_file_type is ResultFileType.H5:
+        result_path = "result.h5"
+    elif result_file_type is ResultFileType.CODE:
+        result_path = "experiment.py"
+    else:
+        result_path = "rtio.vcd"
+    full_result_path = posixpath.join(
+        configs["master_path"], configs["result_path"], rid, result_path
+    )
+    return FileResponse(full_result_path)
 
 
 def get_client(target_name: str) -> rpc.Client:
