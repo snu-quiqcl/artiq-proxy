@@ -1,5 +1,9 @@
 {
     "master_path": "/home/rabi/artiq/",
     "repository_path": "repository/",
-    "result_path": "results/"
+    "result_path": "results/",
+    "ttl_dict": {
+        "test_ttl0": 22,
+        "test_ttl1": 23
+    }
 }
