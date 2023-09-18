@@ -37,11 +37,7 @@ def load_config_file():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "ttl_dict": {
-            {nickname0}: {channel0},
-            {nickname1}: {channel1},
-            ...
-        }
+        "ttl_channels": [{channel0}, {channel1}, ... ]
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
