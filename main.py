@@ -498,7 +498,12 @@ async def set_ttl_level(channel: int, value: bool):
 
 @app.post("/ttl/override/")
 async def set_ttl_override(value: bool):
-    for channel in configs["ttl_dict"].values():
+    """Turns on or off overriding of all TTL channels.
+
+    Args:
+        value: Whether to turn on overriding or not. 
+    """
+    for channel in configs["ttl_channels"]:
         mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
