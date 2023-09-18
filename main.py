@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 
-mi_connection = None  # pylint: disable=invalid-name
+mi_connection: Optional[CommMonInj] = None
 
 
 def load_config_file():
