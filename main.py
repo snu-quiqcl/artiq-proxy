@@ -501,7 +501,7 @@ async def set_ttl_level(name: str, value: bool):
     mi_connection.inject(channel, TTLOverride.level.value, value)
 
 
-@app.post("ttl/override/")
+@app.post("/ttl/override/")
 async def set_ttl_override(value: bool):
     for channel in configs["ttl_dict"].values():
         mi_connection.inject(channel, TTLOverride.en.value, value)
