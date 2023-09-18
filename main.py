@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 
-mi_connection = None
+mi_connection = None  # pylint: disable=invalid-name
 
 
 def load_config_file():
@@ -48,7 +48,7 @@ async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
         """Gets any input, but doesn't do anything."""
-    global mi_connection
+    global mi_connection  # pylint: disable=global-statement, invalid-name
     mi_connection = CommMonInj(do_nothing, do_nothing)
     await mi_connection.connect(configs["core_addr"])
 
@@ -491,7 +491,7 @@ async def set_ttl_level(channel: int, value: bool):
         value: The value to be output when overridden.
     """
     if channel not in configs["ttl_channels"]:
-        logger.exception("The TTL channel %d is not defined in config.json." % channel)
+        logger.exception("The TTL channel %d is not defined in config.json.", channel)
         return
     mi_connection.inject(channel, TTLOverride.level.value, value)
 
