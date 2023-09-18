@@ -470,6 +470,11 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
+@app.post("/ttl/level/")
+async def set_ttl_level(name: str, value: bool):
+    pass
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
