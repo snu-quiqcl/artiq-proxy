@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import h5py
 import pydantic
+from artiq.coredevice.comm_moninj import CommMonInj
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
@@ -23,6 +24,8 @@ from sipyco import pc_rpc as rpc
 logger = logging.getLogger(__name__)
 
 configs = {}
+
+mi_connection = None
 
 
 def load_config_file():
@@ -45,6 +48,15 @@ def load_config_file():
         configs.update(json.load(config_file))
 
 
+async def connect_moninj():
+    def do_nothing(*_):
+        """Gets any input, but doesn't do anything."""
+
+    global mi_connection
+    mi_connection = CommMonInj(do_nothing, do_nothing)
+    await mi_connection.connect(configs["core_addr"])
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Lifespan events.
@@ -52,6 +64,7 @@ async def lifespan(_app: FastAPI):
     This function is set as the lifespan of the application.
     """
     load_config_file()
+    await connect_moninj()
     yield
 
 
@@ -472,7 +485,7 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
 
 @app.post("/ttl/level/")
 async def set_ttl_level(name: str, value: bool):
-    pass
+    print(mi_connection)
 
 
 def get_client(target_name: str) -> rpc.Client:
