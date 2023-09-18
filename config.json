@@ -2,6 +2,7 @@
     "master_path": "/home/rabi/artiq/",
     "repository_path": "repository/",
     "result_path": "results/",
+    "core_addr": "192.168.1.75",
     "ttl_dict": {
         "test_ttl0": 22,
         "test_ttl1": 23
