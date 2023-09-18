@@ -486,6 +486,14 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
 
 @app.post("/ttl/level/")
 async def set_ttl_level(name: str, value: bool):
+    """Sets the overriding value of the given TTL.
+    
+    This only sets a value to be output when overridden, but does not turn on overriding.
+
+    Args:
+        name: The TTL name described in config.json.
+        value: The value to be output when overridden.
+    """
     if name not in configs["ttl_dict"]:
         logger.exception("The TTL name %s is not defined in config.json." % name)
         return
