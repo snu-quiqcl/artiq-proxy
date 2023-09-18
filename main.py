@@ -504,7 +504,7 @@ async def set_ttl_level(name: str, value: bool):
 @app.post("ttl/override/")
 async def set_ttl_override(value: bool):
     for channel in configs["ttl_dict"].values():
-        
+        mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
 def get_client(target_name: str) -> rpc.Client:
