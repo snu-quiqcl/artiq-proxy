@@ -489,7 +489,8 @@ async def set_ttl_level(name: str, value: bool):
     if name not in configs["ttl_dict"]:
         logger.exception("The TTL name %s is not defined in config.json." % name)
         return
-    print(mi_connection)
+    channel = configs["ttl_dict"][name]
+    mi_connection.inject(channel, TTLOverride.level.value, value)
 
 
 def get_client(target_name: str) -> rpc.Client:
