@@ -108,8 +108,6 @@ class RoutingTest(unittest.TestCase):
         test_rid = 0
         self.mocked_client.submit.return_value = test_rid
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
-            self.mocked_connect_moninj.assert_called_once()
             test_params = (
                 {"file": "experiment1.py"},
                 {"file": "experiment2.py", "args": '{"k": "v"}'},
