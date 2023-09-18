@@ -66,6 +66,7 @@ async def lifespan(_app: FastAPI):
     load_config_file()
     await connect_moninj()
     yield
+    await mi_connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
