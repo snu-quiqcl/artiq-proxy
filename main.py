@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import h5py
 import pydantic
-from artiq.coredevice.comm_moninj import CommMonInj
+from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
@@ -486,6 +486,9 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
 
 @app.post("/ttl/level/")
 async def set_ttl_level(name: str, value: bool):
+    if name not in configs["ttl_dict"]:
+        logger.exception("The TTL name %s is not defined in config.json." % name)
+        return
     print(mi_connection)
 
 
