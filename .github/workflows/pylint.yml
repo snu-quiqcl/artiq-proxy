@@ -24,6 +24,7 @@ jobs:
         pip install h5py
         pip install fastapi
         pip install git+https://github.com/m-labs/sipyco.git
+        pip install git+https://github.com/m-labs/artiq.git
     - name: Analyze the code with pylint
       run: |
         pylint main.py --report=y
