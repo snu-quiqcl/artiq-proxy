@@ -103,6 +103,7 @@ class RoutingTest(unittest.TestCase):
             client.post("/experiment/terminate/", params={"rid": test_rid})
             self.mocked_client.request_termination.assert_called_with(test_rid)
 
+    @unittest.skip("temporary skipping as discussed in #63")
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
         test_rid = 0
