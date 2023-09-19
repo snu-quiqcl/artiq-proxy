@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import h5py
 import pydantic
+from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
@@ -24,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 
+mi_connection: Optional[CommMonInj] = None
+
 
 def load_config_file():
     """Loads config information from the configuration file.
@@ -31,13 +34,23 @@ def load_config_file():
     The file should have the following JSON structure:
 
       {
-        "master_path": {master_path}
-        "repository_path": {repository_path}
-        "result_path": {result_path}
+        "master_path": {master_path},
+        "repository_path": {repository_path},
+        "result_path": {result_path},
+        "ttl_channels": [{channel0}, {channel1}, ... ]
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
         configs.update(json.load(config_file))
+
+
+async def connect_moninj():
+    """Creates a CommMonInj instance and connects it to ARTIQ."""
+    def do_nothing(*_):
+        """Gets any input, but doesn't do anything."""
+    global mi_connection  # pylint: disable=global-statement, invalid-name
+    mi_connection = CommMonInj(do_nothing, do_nothing)
+    await mi_connection.connect(configs["core_addr"])
 
 
 @asynccontextmanager
@@ -47,7 +60,9 @@ async def lifespan(_app: FastAPI):
     This function is set as the lifespan of the application.
     """
     load_config_file()
+    await connect_moninj()
     yield
+    await mi_connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -463,6 +478,33 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
         configs["master_path"], configs["result_path"], rid, result_path
     )
     return FileResponse(full_result_path)
+
+
+@app.post("/ttl/level/")
+async def set_ttl_level(channel: int, value: bool):
+    """Sets the overriding value of the given TTL channel.
+    
+    This only sets a value to be output when overridden, but does not turn on overriding.
+
+    Args:
+        channel: The TTL channel number described in device_db.py.
+        value: The value to be output when overridden.
+    """
+    if channel not in configs["ttl_channels"]:
+        logger.exception("The TTL channel %d is not defined in config.json.", channel)
+        return
+    mi_connection.inject(channel, TTLOverride.level.value, value)
+
+
+@app.post("/ttl/override/")
+async def set_ttl_override(value: bool):
+    """Turns on or off overriding of all TTL channels.
+
+    Args:
+        value: Whether to turn on overriding or not. 
+    """
+    for channel in configs["ttl_channels"]:
+        mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
 def get_client(target_name: str) -> rpc.Client:
