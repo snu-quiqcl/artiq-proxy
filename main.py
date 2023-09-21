@@ -517,6 +517,31 @@ async def set_dac_voltage(device: str, channel: int, value: float):
         channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
         value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
     """
+    class_name = "SetDACVoltage"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.setattr_device("ttl23")
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.ttl23.on()
+        delay(2*s)
+        self.ttl23.off()
+"""
+    expid = {
+        "log_level": logging.WARNING,
+        "content": content,
+        "class_name": class_name,
+        "arguments": {},
+    }
+    remote = get_client("master_schedule")
+    rid = remote.submit("main", expid, 0, None, False)
+    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
