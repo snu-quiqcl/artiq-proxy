@@ -508,6 +508,17 @@ async def set_ttl_override(value: bool):
         mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
+@app.post("/dac/voltage/")
+async def set_dac_voltage(device: str, channel: int, value: float):
+    """Sets the voltage of the given DAC channel.
+    
+    Args:
+        device: The DAC device name described in device_db.py.
+        channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
+        value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
+    """
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
