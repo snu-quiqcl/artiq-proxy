@@ -524,14 +524,13 @@ from artiq.experiment import *
 class {class_name}(EnvExperiment):
     def build(self):
         self.setattr_device("core")
-        self.setattr_device("ttl23")
+        self.dac = self.get_device({device})
 
     @kernel
     def run(self):
         self.core.reset()
-        self.ttl23.on()
-        delay(2*s)
-        self.ttl23.off()
+        self.dac.init()
+        self.dac.set_dac([{value}], [{channel}])
 """
     expid = {
         "log_level": logging.WARNING,
