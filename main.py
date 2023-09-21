@@ -530,6 +530,7 @@ class {class_name}(EnvExperiment):
     def run(self):
         self.core.reset()
         self.dac.init()
+        delay(200*us)
         self.dac.set_dac([{value}], [{channel}])
 """
     expid = {
