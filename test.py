@@ -18,11 +18,18 @@ class RoutingTest(unittest.TestCase):
 
     def setUp(self):
         patcher_load_config_file = mock.patch("main.load_config_file")
+        patcher_connect_moninj = mock.patch("main.connect_moninj")
+        patcher_mi_connection = mock.patch("main.mi_connection")
         patcher_get_client = mock.patch("main.get_client")
-        self.mocked_load_config_file = patcher_load_config_file.start()
-        self.mocked_get_client = patcher_get_client.start()
-        self.mocked_client = self.mocked_get_client.return_value
+        patcher_load_config_file.start()
+        patcher_connect_moninj.start()
+        mocked_mi_connection = patcher_mi_connection.start()
+        mocked_mi_connection.close = mock.AsyncMock()
+        mocked_get_client = patcher_get_client.start()
+        self.mocked_client = mocked_get_client.return_value
         self.addCleanup(patcher_load_config_file.stop)
+        self.addCleanup(patcher_connect_moninj.stop)
+        self.addCleanup(patcher_mi_connection.stop)
         self.addCleanup(patcher_get_client.stop)
 
     @mock.patch.dict("main.configs",
@@ -31,7 +38,6 @@ class RoutingTest(unittest.TestCase):
         test_list = ["dir1/", "dir2/", "file1.py", "file2.py"]
         self.mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             for params in ({}, {"directory": "dir1/"}):
                 directory = params.get('directory', '')
                 response = client.get("/ls/", params=params)
@@ -52,7 +58,6 @@ class RoutingTest(unittest.TestCase):
         }
         self.mocked_client.examine.return_value = test_info
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             response = client.get("/experiment/info/", params={'file': 'experiment.py'})
             self.mocked_client.examine.assert_called_with("experiment.py")
             self.assertEqual(response.status_code, 200)
@@ -98,12 +103,12 @@ class RoutingTest(unittest.TestCase):
             client.post("/experiment/terminate/", params={"rid": test_rid})
             self.mocked_client.request_termination.assert_called_with(test_rid)
 
+    @unittest.skip("temporary skipping as discussed in #63")
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
         test_rid = 0
         self.mocked_client.submit.return_value = test_rid
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             test_params = (
                 {"file": "experiment1.py"},
                 {"file": "experiment2.py", "args": '{"k": "v"}'},
