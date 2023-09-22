@@ -37,7 +37,8 @@ def load_config_file():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "ttl_channels": [{channel0}, {channel1}, ... ]
+        "ttl_channels": [{channel0}, {channel1}, ... ],
+        "dac_devices": [{dac_device0}, {dac_device1}, ... ]
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -505,6 +506,42 @@ async def set_ttl_override(value: bool):
     """
     for channel in configs["ttl_channels"]:
         mi_connection.inject(channel, TTLOverride.en.value, value)
+
+
+@app.post("/dac/voltage/")
+async def set_dac_voltage(device: str, channel: int, value: float):
+    """Sets the voltage of the given DAC channel.
+    
+    Args:
+        device: The DAC device name described in device_db.py.
+        channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
+        value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
+    """
+    class_name = "SetDACVoltage"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.dac = self.get_device({device})
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.dac.init()
+        delay(200*us)
+        self.dac.set_dac([{value}], [{channel}])
+"""
+    expid = {
+        "log_level": logging.WARNING,
+        "content": content,
+        "class_name": class_name,
+        "arguments": {},
+    }
+    remote = get_client("master_schedule")
+    rid = remote.submit("main", expid, 0, None, False)
+    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
