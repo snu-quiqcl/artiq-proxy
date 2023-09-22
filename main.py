@@ -11,10 +11,11 @@ import copy
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import h5py
 import pydantic
+import numpy as np
 from fastapi import FastAPI
 from sipyco import pc_rpc as rpc
 
@@ -429,6 +430,20 @@ async def list_result_directory() -> List[int]:
             rid_list.append(int(item))
     rid_list.sort()
     return rid_list
+
+
+@app.get("/dataset/master/")
+async def get_master_dataset(key: str) -> Union[int, float, List]:
+    """Returns the dataset broadcast to artiq master.
+    
+    Args:
+        key: The key of the target dataset.
+    """
+    remote = get_client("master_dataset_db")
+    array = remote.get(key)
+    if isinstance(array, np.ndarray):
+        array = array.tolist()
+    return array
 
 
 def get_client(target_name: str) -> rpc.Client:
