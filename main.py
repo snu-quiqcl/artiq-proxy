@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 
+device_db = {}
+
 mi_connection: Optional[CommMonInj] = None
 
 
@@ -38,12 +40,17 @@ def load_config_file():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
+        "device_db_path": {device_db_path},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": [{dac_device0}, {dac_device1}, ... ]
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
         configs.update(json.load(config_file))
+
+
+def load_device_db():
+    """Loads device DB from the device DB file."""
 
 
 async def connect_moninj():
@@ -62,6 +69,7 @@ async def lifespan(_app: FastAPI):
     This function is set as the lifespan of the application.
     """
     load_config_file()
+    load_device_db()
     await connect_moninj()
     yield
     await mi_connection.close()
