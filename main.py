@@ -12,9 +12,10 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import h5py
+import numpy as np
 import pydantic
 from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
 from fastapi import FastAPI
@@ -447,6 +448,20 @@ async def list_result_directory() -> List[int]:
             rid_list.append(int(item))
     rid_list.sort()
     return rid_list
+
+
+@app.get("/dataset/master/")
+async def get_master_dataset(key: str) -> Union[int, float, List]:
+    """Returns the dataset broadcast to artiq master.
+    
+    Args:
+        key: The key of the target dataset.
+    """
+    remote = get_client("master_dataset_db")
+    array = remote.get(key)
+    if isinstance(array, np.ndarray):
+        array = array.tolist()
+    return array
 
 
 class ResultFileType(str, Enum):
