@@ -2,6 +2,7 @@
     "master_path": "/home/rabi/artiq/",
     "repository_path": "repository/",
     "result_path": "results/",
+    "device_db_path": "device_db.py",
     "core_addr": "192.168.1.75",
     "ttl_devices": [
         "ttl4", "ttl5", "ttl6", "ttl7", "ttl8", "ttl9", "ttl10", "ttl11", "ttl12", "ttl13",
