@@ -38,7 +38,7 @@ def load_config_file():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "ttl_channels": [{channel0}, {channel1}, ... ],
+        "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": [{dac_device0}, {dac_device1}, ... ]
       }
     """
