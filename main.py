@@ -524,7 +524,7 @@ from artiq.experiment import *
 class {class_name}(EnvExperiment):
     def build(self):
         self.setattr_device("core")
-        self.dac = self.get_device({device})
+        self.dac = self.get_device("{device}")
 
     @kernel
     def run(self):
