@@ -512,18 +512,19 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
 
 
 @app.post("/ttl/level/")
-async def set_ttl_level(channel: int, value: bool):
+async def set_ttl_level(device: str, value: bool):
     """Sets the overriding value of the given TTL channel.
     
     This only sets a value to be output when overridden, but does not turn on overriding.
 
     Args:
-        channel: The TTL channel number described in device_db.py.
+        device: The TTL device name described in device_db.py.
         value: The value to be output when overridden.
     """
-    if channel not in configs["ttl_channels"]:
-        logger.exception("The TTL channel %d is not defined in config.json.", channel)
+    if device not in configs["ttl_devices"]:
+        logger.exception("The TTL device %s is not defined in config.json.", device)
         return
+    channel = device_db[device]["arguments"]["channel"]
     mi_connection.inject(channel, TTLOverride.level.value, value)
 
 
