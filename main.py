@@ -535,7 +535,8 @@ async def set_ttl_override(value: bool):
     Args:
         value: Whether to turn on overriding or not. 
     """
-    for channel in configs["ttl_channels"]:
+    for device in configs["ttl_devices"]:
+        channel = device_db[device]["arguments"]["channel"]
         mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
