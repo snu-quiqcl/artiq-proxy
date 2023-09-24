@@ -149,7 +149,7 @@ class FunctionTest(unittest.TestCase):
     @mock.patch("json.load",
                 return_value={"master_path": "master_path/", "repository_path": "repo_path/"})
     def test_load_config_file(self, mocked_load, mocked_open):
-        main.load_config_file()
+        main.load_config()
         mocked_open.assert_called_once_with("config.json", encoding="utf-8")
         mocked_load.assert_called_once()
         self.assertEqual(

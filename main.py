@@ -31,7 +31,7 @@ device_db = {}
 mi_connection: Optional[CommMonInj] = None
 
 
-def load_config_file():
+def load_config():
     """Loads config information from the configuration file.
 
     The file should have the following JSON structure:
@@ -68,7 +68,7 @@ async def lifespan(_app: FastAPI):
 
     This function is set as the lifespan of the application.
     """
-    load_config_file()
+    load_config()
     load_device_db()
     await connect_moninj()
     yield
