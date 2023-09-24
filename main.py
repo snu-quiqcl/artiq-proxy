@@ -1,6 +1,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import importlib.util
 import json
 import logging
 import os
@@ -51,6 +52,12 @@ def load_configs():
 
 def load_device_db():
     """Loads device DB from the device DB file."""
+    device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
+    module_name = "device_db"
+    spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    device_db.update(module.device_db)
 
 
 async def connect_moninj():
