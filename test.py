@@ -17,17 +17,20 @@ class RoutingTest(unittest.TestCase):
     """Unit tests for routing and each operation."""
 
     def setUp(self):
-        patcher_load_config_file = mock.patch("main.load_config_file")
+        patcher_load_configs = mock.patch("main.load_configs")
+        patcher_load_device_db = mock.patch("main.load_device_db")
         patcher_connect_moninj = mock.patch("main.connect_moninj")
         patcher_mi_connection = mock.patch("main.mi_connection")
         patcher_get_client = mock.patch("main.get_client")
-        patcher_load_config_file.start()
+        patcher_load_configs.start()
+        patcher_load_device_db.start()
         patcher_connect_moninj.start()
         mocked_mi_connection = patcher_mi_connection.start()
         mocked_mi_connection.close = mock.AsyncMock()
         mocked_get_client = patcher_get_client.start()
         self.mocked_client = mocked_get_client.return_value
-        self.addCleanup(patcher_load_config_file.stop)
+        self.addCleanup(patcher_load_configs.stop)
+        self.addCleanup(patcher_load_device_db.stop)
         self.addCleanup(patcher_connect_moninj.stop)
         self.addCleanup(patcher_mi_connection.stop)
         self.addCleanup(patcher_get_client.stop)
@@ -148,8 +151,8 @@ class FunctionTest(unittest.TestCase):
     @mock.patch("builtins.open")
     @mock.patch("json.load",
                 return_value={"master_path": "master_path/", "repository_path": "repo_path/"})
-    def test_load_config_file(self, mocked_load, mocked_open):
-        main.load_config_file()
+    def test_load_configs(self, mocked_load, mocked_open):
+        main.load_configs()
         mocked_open.assert_called_once_with("config.json", encoding="utf-8")
         mocked_load.assert_called_once()
         self.assertEqual(

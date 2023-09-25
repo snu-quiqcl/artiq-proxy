@@ -1,6 +1,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import importlib.util
 import json
 import logging
 import os
@@ -26,10 +27,12 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 
+device_db = {}
+
 mi_connection: Optional[CommMonInj] = None
 
 
-def load_config_file():
+def load_configs():
     """Loads config information from the configuration file.
 
     The file should have the following JSON structure:
@@ -38,12 +41,23 @@ def load_config_file():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "ttl_channels": [{channel0}, {channel1}, ... ],
+        "device_db_path": {device_db_path},
+        "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": [{dac_device0}, {dac_device1}, ... ]
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
         configs.update(json.load(config_file))
+
+
+def load_device_db():
+    """Loads device DB from the device DB file."""
+    device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
+    module_name = "device_db"
+    spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    device_db.update(module.device_db)
 
 
 async def connect_moninj():
@@ -61,7 +75,8 @@ async def lifespan(_app: FastAPI):
 
     This function is set as the lifespan of the application.
     """
-    load_config_file()
+    load_configs()
+    load_device_db()
     await connect_moninj()
     yield
     await mi_connection.close()
@@ -497,18 +512,19 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
 
 
 @app.post("/ttl/level/")
-async def set_ttl_level(channel: int, value: bool):
+async def set_ttl_level(device: str, value: bool):
     """Sets the overriding value of the given TTL channel.
     
     This only sets a value to be output when overridden, but does not turn on overriding.
 
     Args:
-        channel: The TTL channel number described in device_db.py.
+        device: The TTL device name described in device_db.py.
         value: The value to be output when overridden.
     """
-    if channel not in configs["ttl_channels"]:
-        logger.exception("The TTL channel %d is not defined in config.json.", channel)
+    if device not in configs["ttl_devices"]:
+        logger.exception("The TTL device %s is not defined in config.json.", device)
         return
+    channel = device_db[device]["arguments"]["channel"]
     mi_connection.inject(channel, TTLOverride.level.value, value)
 
 
@@ -519,7 +535,8 @@ async def set_ttl_override(value: bool):
     Args:
         value: Whether to turn on overriding or not. 
     """
-    for channel in configs["ttl_channels"]:
+    for device in configs["ttl_devices"]:
+        channel = device_db[device]["arguments"]["channel"]
         mi_connection.inject(channel, TTLOverride.en.value, value)
 
 
