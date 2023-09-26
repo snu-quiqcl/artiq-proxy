@@ -11,5 +11,8 @@
     ],
     "dac_devices": {
         "zotino0": [0, 1, 2, 3, 4, 5, 6, 7]
+    },
+    "dds_devices": {
+        "urukul0": [0, 1, 2, 3]
     }
 }
