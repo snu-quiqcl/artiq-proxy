@@ -553,8 +553,8 @@ async def set_dac_voltage(device: str, channel: int, value: float):
         channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
         value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
     """
-    if device not in configs["dac_devices"]:
-        logger.exception("The DAC device %s is not defined in config.json.", device)
+    if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
+        logger.exception("The DAC device %s CH %d is not defined in config.json.", device, channel)
         return
     class_name = "SetDACVoltage"
     content = f"""
