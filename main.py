@@ -602,6 +602,9 @@ async def set_dds_profile(
         phase: The phase to set. For Urukul, the valid range is from 0 to 1.
         switching: If True, the current profile is switched to the default profile.
     """
+    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        return
 
 
 def get_client(target_name: str) -> rpc.Client:
