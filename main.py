@@ -606,6 +606,7 @@ async def set_dds_profile(
         logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return
     class_name = "SetDDSProfile"
+    profile_switching_code = "self.dds.cpld.set_profile(7)"
     content = f"""
 from artiq.experiment import *
 
@@ -620,6 +621,7 @@ class {class_name}(EnvExperiment):
         self.dds.cpld.init()
         self.dds.init()
         self.dds.set(frequency={frequency}, amplitude={amplitude}, phase={phase})
+        {profile_switching_code if switching else ""}
 """
     expid = {
         "log_level": logging.WARNING,
