@@ -617,6 +617,7 @@ class {class_name}(EnvExperiment):
     @kernel
     def run(self):
         self.core.reset()
+        self.dds.cpld.init()
         self.dds.init()
         self.dds.set({frequency}, {phase}, {amplitude})
 """
