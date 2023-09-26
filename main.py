@@ -43,7 +43,11 @@ def load_configs():
         "result_path": {result_path},
         "device_db_path": {device_db_path},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
-        "dac_devices": [{dac_device0}, {dac_device1}, ... ]
+        "dac_devices": {
+            {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
+            {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
+            ...
+        }
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -549,6 +553,9 @@ async def set_dac_voltage(device: str, channel: int, value: float):
         channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
         value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
     """
+    if device not in configs["dac_devices"]:
+        logger.exception("The DAC device %s is not defined in config.json.", device)
+        return
     class_name = "SetDACVoltage"
     content = f"""
 from artiq.experiment import *
