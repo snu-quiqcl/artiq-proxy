@@ -612,7 +612,7 @@ from artiq.experiment import *
 class {class_name}(EnvExperiment):
     def build(self):
         self.setattr_device("core")
-        self.dds = self.get_device("{device}")
+        self.dds = self.get_device("{device}_ch{channel}")
 
     @kernel
     def run(self):
