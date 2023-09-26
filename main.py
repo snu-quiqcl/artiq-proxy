@@ -576,6 +576,27 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+@app.post("/dds/profile/")
+async def set_dds_profile(
+    device: str,
+    channel: int,
+    frequency: float,
+    amplitude: float,
+    phase: float,
+    switching: bool
+):
+    """Sets the default profile of the given DDS channel.
+    
+    Args:
+        device: The DDS device name described in device_db.py.
+        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
+        frequency: The frequency to set. For Urukul, the valid range is from 1HHz to 400MHz.
+        amplitude: The amplitude to set. For Urukul, the valid range is from 0 to 1.
+        phase: The phase to set. For Urukul, the valid range is from 0 to 1.
+        switching: If True, the current profile is switched to the default profile.
+    """
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
