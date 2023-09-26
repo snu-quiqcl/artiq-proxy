@@ -9,5 +9,7 @@
         "ttl14", "ttl15", "ttl16", "ttl17", "ttl18", "ttl19", "ttl20", "ttl21", "ttl22", "ttl23",
         "led0", "led1"
     ],
-    "dac_devices": ["zotino0"]
+    "dac_devices": {
+        "zotino0": [0, 1, 2, 3]
+    }
 }
