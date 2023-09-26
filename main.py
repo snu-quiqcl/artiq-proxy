@@ -619,7 +619,7 @@ class {class_name}(EnvExperiment):
         self.core.reset()
         self.dds.cpld.init()
         self.dds.init()
-        self.dds.set({frequency}, {phase}, {amplitude})
+        self.dds.set(frequency={frequency}, amplitude={amplitude}, phase={phase})
 """
 
 
