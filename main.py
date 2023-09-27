@@ -591,7 +591,7 @@ async def set_dds_profile(
     amplitude: float,
     phase: float,
     switching: bool
-):
+):  # pylint: disable=too-many-arguments
     """Sets the default profile of the given DDS channel.
     
     Args:
