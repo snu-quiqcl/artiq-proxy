@@ -643,6 +643,9 @@ async def set_dds_switch(device: str, channel: int, on: bool):
         channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
         on: If True, this turns on the TTL switch. Otherwise, this turns off it.
     """
+    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        return
 
 
 def get_client(target_name: str) -> rpc.Client:
