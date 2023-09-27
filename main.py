@@ -691,6 +691,9 @@ async def set_dds_attenuation(device: str, channel: int, value: float):
         value: The attenuation to set. For Urukul, the valid range is from 0dB to -31.5dB.
           The value is the absolute value of the actual attenuation, e.g., 10 for -10dB.
     """
+    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        return
 
 
 def get_client(target_name: str) -> rpc.Client:
