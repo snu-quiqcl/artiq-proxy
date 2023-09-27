@@ -694,6 +694,22 @@ async def set_dds_attenuation(device: str, channel: int, value: float):
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
         logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return
+    class_name = "SetDDSAttenuation"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.dds = self.get_device("{device}_ch{channel}")
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.dds.cpld.init()
+        self.dds.init()
+        self.dds.set_att({value})
+"""
 
 
 def get_client(target_name: str) -> rpc.Client:
