@@ -634,6 +634,17 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+@app.post("/dds/switch/")
+async def set_dds_switch(device: str, channel: int, on: bool):
+    """Turns on and off the TTL switch, which controls the given DDS channel.
+    
+    Args:
+        device: The DDS device name described in device_db.py.
+        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
+        on: If True, this turns on the TTL switch. Otherwise, this turns off it.
+    """
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
