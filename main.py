@@ -646,6 +646,26 @@ async def set_dds_switch(device: str, channel: int, on: bool):
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
         logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return
+    class_name = "SetDDSSwitch"
+    if on:
+        setting_switch_code = "self.dds.sw.on()"
+    else:
+        setting_switch_code = "self.dds.sw.off()"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.dds = self.get_device("{device}_ch{channel}")
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.dds.cpld.init()
+        self.dds.init()
+        {setting_switch_code}
+"""
 
 
 def get_client(target_name: str) -> rpc.Client:
