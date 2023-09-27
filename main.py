@@ -666,6 +666,15 @@ class {class_name}(EnvExperiment):
         self.dds.init()
         {setting_switch_code}
 """
+    expid = {
+        "log_level": logging.WARNING,
+        "content": content,
+        "class_name": class_name,
+        "arguments": {},
+    }
+    remote = get_client("master_schedule")
+    rid = remote.submit("main", expid, 0, None, False)
+    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
