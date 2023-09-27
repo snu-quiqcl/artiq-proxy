@@ -681,6 +681,18 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+@app.post("/dds/att/")
+async def set_dds_attenuation(device: str, channel: int, value: float):
+    """Sets the attenuation of the given DDS channel.
+
+    Args:
+        device: The DDS device name described in device_db.py.
+        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
+        value: The attenuation to set. For Urukul, the valid range is from 0dB to -31.5dB.
+          The value is the absolute value of the actual attenuation, e.g., 10 for -10dB.
+    """
+
+
 def get_client(target_name: str) -> rpc.Client:
     """Creates a client connecting to ARTIQ and returns it.
 
