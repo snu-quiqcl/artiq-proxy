@@ -635,17 +635,21 @@ class {class_name}(EnvExperiment):
 
 
 @app.post("/dds/switch/")
-async def set_dds_switch(device: str, channel: int, on: bool):
+async def set_dds_switch(device: str, channel: int, on: bool) -> int:
     """Turns on and off the TTL switch, which controls the given DDS channel.
     
     Args:
         device: The DDS device name described in device_db.py.
         channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
         on: If True, this turns on the TTL switch. Otherwise, this turns off it.
+
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+        If there is an error, it returns -1.
     """
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
         logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
-        return
+        return -1
     class_name = "SetDDSSwitch"
     if on:
         setting_switch_code = "self.dds.sw.on()"
