@@ -644,7 +644,7 @@ async def set_dds_switch(device: str, channel: int, on: bool):
         on: If True, this turns on the TTL switch. Otherwise, this turns off it.
     """
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return
     class_name = "SetDDSSwitch"
     if on:
