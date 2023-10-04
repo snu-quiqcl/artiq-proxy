@@ -526,7 +526,7 @@ async def set_ttl_level(device: str, value: bool):
         value: The value to be output when overridden.
     """
     if device not in configs["ttl_devices"]:
-        logger.exception("The TTL device %s is not defined in config.json.", device)
+        logger.error("The TTL device %s is not defined in config.json.", device)
         return
     channel = device_db[device]["arguments"]["channel"]
     mi_connection.inject(channel, TTLOverride.level.value, value)
@@ -554,7 +554,7 @@ async def set_dac_voltage(device: str, channel: int, value: float):
         value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
     """
     if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
-        logger.exception("The DAC device %s CH %d is not defined in config.json.", device, channel)
+        logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
         return
     class_name = "SetDACVoltage"
     content = f"""
@@ -603,7 +603,7 @@ async def set_dds_profile(
         switching: If True, the current profile is switched to the default profile.
     """
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return
     class_name = "SetDDSProfile"
     profile_switching_code = "self.dds.cpld.set_profile(7)"
