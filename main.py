@@ -682,7 +682,7 @@ class {class_name}(EnvExperiment):
 
 
 @app.post("/dds/att/")
-async def set_dds_attenuation(device: str, channel: int, value: float):
+async def set_dds_attenuation(device: str, channel: int, value: float) -> int:
     """Sets the attenuation of the given DDS channel.
 
     Args:
@@ -690,10 +690,14 @@ async def set_dds_attenuation(device: str, channel: int, value: float):
         channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
         value: The attenuation to set. For Urukul, the valid range is from 0dB to -31.5dB.
           The value is the absolute value of the actual attenuation, e.g., 10 for -10dB.
+
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+        If there is an error, it returns -1.
     """
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
         logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
-        return
+        return -1
     class_name = "SetDDSAttenuation"
     content = f"""
 from artiq.experiment import *
