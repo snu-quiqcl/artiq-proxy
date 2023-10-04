@@ -43,7 +43,11 @@ def load_configs():
         "result_path": {result_path},
         "device_db_path": {device_db_path},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
-        "dac_devices": [{dac_device0}, {dac_device1}, ... ]
+        "dac_devices": {
+            {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
+            {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
+            ...
+        }
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -522,7 +526,7 @@ async def set_ttl_level(device: str, value: bool):
         value: The value to be output when overridden.
     """
     if device not in configs["ttl_devices"]:
-        logger.exception("The TTL device %s is not defined in config.json.", device)
+        logger.error("The TTL device %s is not defined in config.json.", device)
         return
     channel = device_db[device]["arguments"]["channel"]
     mi_connection.inject(channel, TTLOverride.level.value, value)
@@ -549,6 +553,9 @@ async def set_dac_voltage(device: str, channel: int, value: float):
         channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
         value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
     """
+    if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
+        logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
+        return
     class_name = "SetDACVoltage"
     content = f"""
 from artiq.experiment import *
@@ -564,6 +571,57 @@ class {class_name}(EnvExperiment):
         self.dac.init()
         delay(200*us)
         self.dac.set_dac([{value}], [{channel}])
+"""
+    expid = {
+        "log_level": logging.WARNING,
+        "content": content,
+        "class_name": class_name,
+        "arguments": {},
+    }
+    remote = get_client("master_schedule")
+    rid = remote.submit("main", expid, 0, None, False)
+    return rid
+
+
+@app.post("/dds/profile/")
+async def set_dds_profile(
+    device: str,
+    channel: int,
+    frequency: float,
+    amplitude: float,
+    phase: float,
+    switching: bool
+):  # pylint: disable=too-many-arguments
+    """Sets the default profile of the given DDS channel.
+    
+    Args:
+        device: The DDS device name described in device_db.py.
+        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
+        frequency: The frequency to set. For Urukul, the valid range is from 1HHz to 400MHz.
+        amplitude: The amplitude to set. For Urukul, the valid range is from 0 to 1.
+        phase: The phase to set. For Urukul, the valid range is from 0 to 1.
+        switching: If True, the current profile is switched to the default profile.
+    """
+    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        return
+    class_name = "SetDDSProfile"
+    profile_switching_code = "self.dds.cpld.set_profile(7)"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.dds = self.get_device("{device}_ch{channel}")
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.dds.cpld.init()
+        self.dds.init()
+        self.dds.set(frequency={frequency}, amplitude={amplitude}, phase={phase})
+        {profile_switching_code if switching else ""}
 """
     expid = {
         "log_level": logging.WARNING,
