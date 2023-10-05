@@ -696,7 +696,7 @@ async def set_dds_attenuation(device: str, channel: int, value: float) -> int:
         If there is an error, it returns -1.
     """
     if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.exception("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
         return -1
     class_name = "SetDDSAttenuation"
     content = f"""
