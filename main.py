@@ -634,6 +634,50 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+@app.post("/dds/att/")
+async def set_dds_attenuation(device: str, channel: int, value: float) -> int:
+    """Sets the attenuation of the given DDS channel.
+
+    Args:
+        device: The DDS device name described in device_db.py.
+        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
+        value: The attenuation to set. For Urukul, the valid range is from 0dB to -31.5dB.
+          The value is the absolute value of the actual attenuation, e.g., 10 for -10dB.
+
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+        If there is an error, it returns -1.
+    """
+    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
+        return -1
+    class_name = "SetDDSAttenuation"
+    content = f"""
+from artiq.experiment import *
+
+class {class_name}(EnvExperiment):
+    def build(self):
+        self.setattr_device("core")
+        self.dds = self.get_device("{device}_ch{channel}")
+
+    @kernel
+    def run(self):
+        self.core.reset()
+        self.dds.cpld.init()
+        self.dds.init()
+        self.dds.set_att({value})
+"""
+    expid = {
+        "log_level": logging.WARNING,
+        "content": content,
+        "class_name": class_name,
+        "arguments": {},
+    }
+    remote = get_client("master_schedule")
+    rid = remote.submit("main", expid, 0, None, False)
+    return rid
+
+
 @app.post("/dds/switch/")
 async def set_dds_switch(device: str, channel: int, on: bool) -> int:
     """Turns on and off the TTL switch, which controls the given DDS channel.
