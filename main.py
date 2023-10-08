@@ -142,27 +142,26 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-previous_queue = {}
+global_previous_queue = {}
 
 
 @app.get("/experiment/queue/")
-async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
-    """Gets the list of queued experiment and returns it.
+async def get_scheduled_queue() -> Dict[int, Dict[str, Any]]:
+    """Gets the scheduled queue and returns it.
 
     Returns:
-        A dictionary of queued experiments with rid as their keys.
-        The value of each corresponding rid is a dictionary with several information:
-          "priority", "status", "due_date", "pipeline", "expid", etc.
-        It includes the running experiment with different "status" value.
+        A dictionary with queued experiments.
+        Each key is a RID, and its value is the dictionary with the experiment information:
+          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
     """
     remote = get_client("master_schedule")
-    current_queue = copy.deepcopy(previous_queue)
+    previous_queue = copy.deepcopy(global_previous_queue)
+    current_queue = copy.deepcopy(global_previous_queue)
     while current_queue == previous_queue:
         await asyncio.sleep(0)
-        current_queue.clear()
-        current_queue.update(remote.get_status())
-    previous_queue.clear()
-    previous_queue.update(current_queue)
+        current_queue = remote.get_status()
+    global_previous_queue.clear()
+    global_previous_queue.update(current_queue)
     return current_queue
 
 
