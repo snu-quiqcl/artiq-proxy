@@ -187,17 +187,14 @@ async def get_scheduled_queue(fetched_time: Optional[float] = None) -> Any:
     """
     if fetched_time is None or fetched_time < latest_schedule.updated_time:
         return latest_schedule
-    """
     remote = get_client("master_schedule")
-    previous_queue = copy.deepcopy(global_previous_queue)
-    current_queue = copy.deepcopy(global_previous_queue)
-    while current_queue == previous_queue:
+    latest_queue = copy.deepcopy(latest_schedule.queue)
+    queue = copy.deepcopy(latest_queue)
+    while queue == latest_queue:
         await asyncio.sleep(0)
-        current_queue = remote.get_status()
-    global_previous_queue.clear()
-    global_previous_queue.update(current_queue)
-    return current_queue
-    """
+        queue = remote.get_status()
+    latest_schedule.update(queue)
+    return latest_schedule
 
 
 @app.post("/experiment/delete/")
