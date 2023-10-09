@@ -14,7 +14,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -33,7 +33,7 @@ device_db = {}
 mi_connection: Optional[CommMonInj] = None
 
 @dataclasses.dataclass
-class ScheduleInfo:
+class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
     
     Fields:
@@ -42,7 +42,7 @@ class ScheduleInfo:
           Each key is a RID, and its value is the dictionary with the experiment information:
           "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
     """
-    updated_time: Optional[int] = None
+    updated_time: Optional[float] = None
     queue: Optional[Dict[int, Dict[str, Any]]] = None
 
     def update(self, queue: Dict[int, Dict[str, Any]]):
@@ -176,17 +176,18 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-global_previous_queue = {}
-
-
-@app.get("/experiment/queue/")
-async def get_scheduled_queue() -> Dict[int, Dict[str, Any]]:
+@app.get("/experiment/queue/", response_model=ScheduleInfo)
+async def get_scheduled_queue(fetched_time: Optional[float] = None) -> Any:
     """Gets the scheduled queue and returns it.
 
+    Args:
+        fetched_time: The recently fetched time, in the format of time.time().
+
     Returns:
-        A dictionary with queued experiments.
-        Each key is a RID, and its value is the dictionary with the experiment information:
-          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
+        A tuple with the latest schedule fields.
+    """
+    if fetched_time is None or fetched_time < latest_schedule.updated_time:
+        return latest_schedule
     """
     remote = get_client("master_schedule")
     previous_queue = copy.deepcopy(global_previous_queue)
@@ -197,6 +198,7 @@ async def get_scheduled_queue() -> Dict[int, Dict[str, Any]]:
     global_previous_queue.clear()
     global_previous_queue.update(current_queue)
     return current_queue
+    """
 
 
 @app.post("/experiment/delete/")
