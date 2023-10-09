@@ -1,7 +1,6 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
-import dataclasses
 import importlib.util
 import json
 import logging
@@ -14,7 +13,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import h5py
 import numpy as np
