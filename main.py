@@ -42,8 +42,20 @@ class ScheduleInfo:
           Each key is a RID, and its value is the dictionary with the experiment information:
           "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
     """
-    updated_time: int
-    queue: Dict[int, Dict[str, Any]]
+    updated_time: Optional[int] = None
+    queue: Optional[Dict[int, Dict[str, Any]]] = None
+
+    def update(self, queue: Dict[int, Dict[str, Any]]):
+        """Updates the schedule info.
+        
+        Args:
+            queue: A new scheduled queue.
+        """
+        self.updated_time = time.time()
+        self.queue = queue
+
+
+latest_schedule = ScheduleInfo()
 
 
 def load_configs():
