@@ -32,7 +32,6 @@ device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
 
-@dataclasses.dataclass
 class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
     
