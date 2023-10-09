@@ -183,7 +183,10 @@ async def get_scheduled_queue(fetched_time: Optional[float] = None) -> Any:
         fetched_time: The recently fetched time, in the format of time.time().
 
     Returns:
-        A tuple with the latest schedule fields.
+        The latest schedule info.
+        If the given fetched time is earlier than when the schedule was updated,
+        it returns the latest schedule info immediately. 
+        Otherwise, it polls until the schedule is updated and then returns it.
     """
     if fetched_time is None or fetched_time < latest_schedule.updated_time:
         return latest_schedule
