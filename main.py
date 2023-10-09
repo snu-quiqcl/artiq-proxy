@@ -90,6 +90,13 @@ def load_device_db():
     device_db.update(module.device_db)
 
 
+def init_schedule():
+    """Initializes the schedule info to the latest."""
+    remote = get_client("master_schedule")
+    queue = remote.get_status()
+    latest_schedule.update(queue)
+
+
 async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
@@ -107,6 +114,7 @@ async def lifespan(_app: FastAPI):
     """
     load_configs()
     load_device_db()
+    init_schedule()
     await connect_moninj()
     yield
     await mi_connection.close()
