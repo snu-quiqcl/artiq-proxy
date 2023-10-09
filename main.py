@@ -1,6 +1,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import dataclasses
 import importlib.util
 import json
 import logging
@@ -30,6 +31,19 @@ configs = {}
 device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
+
+@dataclasses.dataclass
+class ScheduleInfo:
+    """Scheduled queue information.
+    
+    Fields:
+        updated_time: The time when the current schedule was fetched, in the format of time.time().
+        queue: A dictionary with queued experiments.
+          Each key is a RID, and its value is the dictionary with the experiment information:
+          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
+    """
+    updated_time: int
+    queue: Dict[int, Dict[str, Any]]
 
 
 def load_configs():
