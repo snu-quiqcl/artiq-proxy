@@ -35,7 +35,7 @@ class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
     
     Fields:
-        updated_time: The time when the current schedule was fetched, in the format of time.time().
+        updated_time: The time when the current schedule was updated, in the format of time.time().
         queue: A dictionary with queued experiments.
           Each key is a RID, and its value is the dictionary with the experiment information:
           "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
@@ -175,19 +175,19 @@ async def get_experiment_info(file: str) -> Any:
 
 
 @app.get("/experiment/queue/", response_model=ScheduleInfo)
-async def get_scheduled_queue(fetched_time: Optional[float] = None) -> Any:
+async def get_scheduled_queue(updated_time: Optional[float] = None) -> Any:
     """Gets the scheduled queue and returns it.
 
     Args:
-        fetched_time: The recently fetched time, in the format of time.time().
+        updated_time: The last updated time by the client, in the format of time.time().
 
     Returns:
         The latest schedule info.
-        If the given fetched time is earlier than when the schedule was updated,
+        If the given updated time is earlier than when the latest schedule was updated,
         it returns the latest schedule info immediately.
         Otherwise, it polls until the schedule is updated and then returns it.
     """
-    if fetched_time is None or fetched_time < latest_schedule.updated_time:
+    if updated_time is None or updated_time < latest_schedule.updated_time:
         return latest_schedule
     remote = get_client("master_schedule")
     latest_queue = copy.deepcopy(latest_schedule.queue)
