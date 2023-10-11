@@ -191,7 +191,7 @@ async def get_scheduled_queue(updated_time: Optional[float] = None) -> Any:
         return latest_schedule
     remote = get_client("master_schedule")
     latest_queue = copy.deepcopy(latest_schedule.queue)
-    queue = copy.deepcopy(latest_queue)
+    queue = remote.get_status()
     while queue == latest_queue:
         await asyncio.sleep(0)
         queue = remote.get_status()
