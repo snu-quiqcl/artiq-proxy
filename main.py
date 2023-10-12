@@ -31,6 +31,30 @@ device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
 
+class ScheduleInfo(pydantic.BaseModel):
+    """Scheduled queue information.
+    
+    Fields:
+        updated_time: The time when the current schedule was updated, in the format of time.time().
+        queue: A dictionary with queued experiments.
+          Each key is a RID, and its value is the dictionary with the experiment information:
+          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
+    """
+    updated_time: Optional[float] = None
+    queue: Optional[Dict[int, Dict[str, Any]]] = None
+
+    def update(self, queue: Dict[int, Dict[str, Any]]):
+        """Updates the schedule info.
+        
+        Args:
+            queue: A new scheduled queue.
+        """
+        self.updated_time = time.time()
+        self.queue = queue
+
+
+latest_schedule = ScheduleInfo()
+
 
 def load_configs():
     """Loads config information from the configuration file.
@@ -64,6 +88,13 @@ def load_device_db():
     device_db.update(module.device_db)
 
 
+def init_schedule():
+    """Initializes the schedule info to the latest."""
+    remote = get_client("master_schedule")
+    queue = remote.get_status()
+    latest_schedule.update(queue)
+
+
 async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
@@ -81,6 +112,7 @@ async def lifespan(_app: FastAPI):
     """
     load_configs()
     load_device_db()
+    init_schedule()
     await connect_moninj()
     yield
     await mi_connection.close()
@@ -142,28 +174,29 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-previous_queue = {}
+@app.get("/experiment/queue/", response_model=ScheduleInfo)
+async def get_scheduled_queue(updated_time: Optional[float] = None) -> Any:
+    """Gets the scheduled queue and returns it.
 
-
-@app.get("/experiment/queue/")
-async def get_experiment_queue() -> Dict[int, Dict[str, Any]]:
-    """Gets the list of queued experiment and returns it.
+    Args:
+        updated_time: The last updated time by the client, in the format of time.time().
 
     Returns:
-        A dictionary of queued experiments with rid as their keys.
-        The value of each corresponding rid is a dictionary with several information:
-          "priority", "status", "due_date", "pipeline", "expid", etc.
-        It includes the running experiment with different "status" value.
+        The latest schedule info.
+        If the given updated time is earlier than when the latest schedule was updated,
+        it returns the latest schedule info immediately.
+        Otherwise, it polls until the schedule is updated and then returns it.
     """
+    if updated_time is None or updated_time < latest_schedule.updated_time:
+        return latest_schedule
     remote = get_client("master_schedule")
-    current_queue = copy.deepcopy(previous_queue)
-    while current_queue == previous_queue:
+    latest_queue = copy.deepcopy(latest_schedule.queue)
+    queue = remote.get_status()
+    while queue == latest_queue:
         await asyncio.sleep(0)
-        current_queue.clear()
-        current_queue.update(remote.get_status())
-    previous_queue.clear()
-    previous_queue.update(current_queue)
-    return current_queue
+        queue = remote.get_status()
+    latest_schedule.update(queue)
+    return latest_schedule
 
 
 @app.post("/experiment/delete/")
