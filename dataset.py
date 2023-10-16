@@ -3,6 +3,7 @@
 import bisect
 import functools
 import itertools
+import time
 from collections import deque, defaultdict
 from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
@@ -98,3 +99,16 @@ class DatasetTracker:
               Any modifications added after this timestamp will be returned.
         """
         return self._modifications[dataset].tail(timestamp)
+
+
+def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
+    """Adds modification to the tracker called as notify_cb() of sipyco system.
+    
+    Args:
+        tracker: Target dataset tracket object.
+        mod: The argument of notify_cb() called by sipyco.sync_struct.Subscriber.
+    """
+    if mod["action"] == "init":
+        return
+    dataset, *_ = mod.pop("path")
+    tracker.add(dataset, time.time(), mod)
