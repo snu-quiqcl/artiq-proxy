@@ -58,7 +58,8 @@ class SortedQueue(Generic[K, V]):
         return latest_key, values
 
 
-ModificationQueue = SortedQueue[float, Dict[str, Any]]
+Modification = Dict[str, Any]
+ModificationQueue = SortedQueue[float, Modification]
 
 
 class DatasetTracker:
