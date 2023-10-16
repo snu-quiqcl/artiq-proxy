@@ -53,8 +53,11 @@ class SortedQueue(Generic[K, V]):
         return latest_key, values
 
 
+ModificationQueue = SortedQueue[float, Dict[str, Any]]
+
+
 class DatasetTracker:
     """Holds dataset modifications and provides searching API."""
 
     def __init__(self):
-        self._modifications: Dict[str, SortedQueue[float, Dict[str, Any]]]
+        self._modifications: Dict[str, ModificationQueue] = {}
