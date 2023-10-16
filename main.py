@@ -23,6 +23,8 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 
+import dataset as dset
+
 logger = logging.getLogger(__name__)
 
 configs = {}
@@ -30,6 +32,8 @@ configs = {}
 device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
+
+dataset_tracker: Optional[dset.DatasetTracker] = None
 
 class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
@@ -71,7 +75,8 @@ def load_configs():
             {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
             {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
             ...
-        }
+        },
+        "dataset_tracker_maxlen": {maxlen}
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
@@ -95,6 +100,16 @@ def init_schedule():
     latest_schedule.update(queue)
 
 
+def init_dataset_tracker():
+    """Initializes the dataset tracker.
+    
+    This should be called after loading config.
+    """
+    global dataset_tracker
+    maxlen = configs.get("dataset_tracker_maxlen", 1 << 16)
+    dataset_tracker = dset.DatasetTracker(maxlen)
+
+
 async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
@@ -113,6 +128,7 @@ async def lifespan(_app: FastAPI):
     load_configs()
     load_device_db()
     init_schedule()
+    init_dataset_tracker()
     await connect_moninj()
     yield
     await mi_connection.close()
