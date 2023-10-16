@@ -40,8 +40,8 @@ class SortedQueue(Generic[K, V]):
         """
         return self._keys.popleft(), self._values.popleft()
     
-    def since(self, key: K) -> Tuple[K, Tuple[V]]:
-        """Returns the most recent key and the values since the given key.
+    def tail(self, key: K) -> Tuple[K, Tuple[V]]:
+        """Returns the most recent key and the values after the given key.
         
         Args:
             key: The search point key.
