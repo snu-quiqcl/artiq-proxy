@@ -86,3 +86,15 @@ class DatasetTracker:
             modification: Modification dict, e.g., {"action": "append", "x": value}.
         """
         self._modifications[dataset].push(timestamp, modification)
+
+    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification]]:
+        """Returns the latest timestamp and modifications since the given timestamp.
+
+        See SortedQueue.tail() for details.
+        
+        Args:
+            dataset: Target dataset name.
+            timestamp: The last timestamp of the previous update.
+              Any modifications added after this timestamp will be returned.
+        """
+        return self._modifications[dataset].tail(timestamp)
