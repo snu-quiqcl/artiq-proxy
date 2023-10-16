@@ -23,6 +23,7 @@ from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
+from sipyco.sync_struct import Subscriber
 
 import dataset as dset
 
@@ -101,7 +102,7 @@ def init_schedule():
     latest_schedule.update(queue)
 
 
-def init_dataset_tracker():
+def init_dataset_tracker() -> Subscriber:
     """Initializes the dataset tracker.
     
     This should be called after loading config.
@@ -109,6 +110,7 @@ def init_dataset_tracker():
     global dataset_tracker
     maxlen = configs.get("dataset_tracker_maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
+    return Subscriber("datasets", lambda x: x, functools.partial(dset.notify_callback, dataset_tracker))
 
 
 async def connect_moninj():
