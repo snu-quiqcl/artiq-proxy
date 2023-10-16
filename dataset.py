@@ -1,7 +1,7 @@
 """Module for realtime dataset management."""
 
 from collections import deque
-from typing import Any, Dict, Tuple, TypeVar, Generic
+from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
 
@@ -12,9 +12,9 @@ class SortedQueue(Generic[K, V]):
     Therefore, pushed keys must be greater than the current last key.
     """
 
-    def __init__(self):
-        self._keys = deque[K]()
-        self._values = deque[V]()
+    def __init__(self, maxlen: Optional[int] = None):
+        self._keys = deque[K](maxlen=maxlen)
+        self._values = deque[V](maxlen=maxlen)
 
     def push(self, key: K, value: V):
         """Append a key-value pair to the queue.
