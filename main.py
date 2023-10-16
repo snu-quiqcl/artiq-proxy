@@ -1,6 +1,9 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import asyncio
+import copy
+import functools
 import importlib.util
 import json
 import logging
@@ -8,8 +11,6 @@ import os
 import posixpath
 import shutil
 import time
-import copy
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
