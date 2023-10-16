@@ -76,3 +76,13 @@ class DatasetTracker:
     def datasets(self) -> Tuple[str]:
         """Returns the available dataset names."""
         return tuple(self._modifications)
+
+    def add(self, dataset: str, timestamp: float, modification: Modification):
+        """Adds a modification record.
+        
+        Args:
+            dataset: The dataset name of the modification.
+            timestamp: The timestamp of the modification.
+            modification: Modification dict, e.g., {"action": "append", "x": value}.
+        """
+        self._modifications[dataset].push(timestamp, modification)
