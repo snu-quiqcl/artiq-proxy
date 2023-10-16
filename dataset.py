@@ -15,6 +15,10 @@ class SortedQueue(Generic[K, V]):
     """
 
     def __init__(self, maxlen: Optional[int] = None):
+        """
+        Args:
+            maxlen: The maximum length of deques.
+        """
         self._keys = deque[K](maxlen=maxlen)
         self._values = deque[V](maxlen=maxlen)
 
