@@ -1,5 +1,6 @@
 """Module for realtime dataset management."""
 
+from collections import deque
 from typing import Any, Dict, List, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
@@ -12,8 +13,8 @@ class SortedQueue(Generic[K, V]):
     """
 
     def __init__(self):
-        self._keys: List[K] = []
-        self._values: List[V] = []
+        self._keys = deque[K]()
+        self._values = deque[V]()
 
     def push(self, key: K, value: V):
         """Append a key-value pair to the queue.
@@ -30,7 +31,7 @@ class SortedQueue(Generic[K, V]):
         
         The queue must not be empty.
         """
-        return self._keys.pop(0), self._values.pop(0)
+        return self._keys.popleft(), self._values.popleft()
 
 
 class DatasetTracker:
