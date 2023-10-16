@@ -15,6 +15,16 @@ class SortedQueue(Generic[K, V]):
         self._keys: List[K] = []
         self._values: List[V] = []
 
+    def push(self, key: K, value: V):
+        """Append a key-value pair to the queue.
+        
+        Args:
+            key: Key for searching. It must be greater than the last key.
+            value: Corresponding value.
+        """
+        self._keys.append(key)
+        self._values.append(value)
+
 
 class DatasetTracker:
     """Holds dataset modifications and provides searching API."""
