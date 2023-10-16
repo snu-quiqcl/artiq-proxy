@@ -1,6 +1,6 @@
 """Module for realtime dataset management."""
 
-from typing import Any, Dict, List, TypeVar, Generic
+from typing import Any, Dict, List, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
 
@@ -24,6 +24,13 @@ class SortedQueue(Generic[K, V]):
         """
         self._keys.append(key)
         self._values.append(value)
+
+    def pop(self) -> Tuple[K, V]:
+        """Removes and returns the key-value pair at the front of the queue.
+        
+        The queue must not be empty.
+        """
+        return self._keys.pop(0), self._values.pop(0)
 
 
 class DatasetTracker:
