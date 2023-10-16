@@ -1,7 +1,7 @@
 """Module for realtime dataset management."""
 
 from collections import deque
-from typing import Any, Dict, List, Tuple, TypeVar, Generic
+from typing import Any, Dict, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
 
