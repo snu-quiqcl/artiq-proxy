@@ -39,7 +39,7 @@ class SortedQueue(Generic[K, V]):
         The queue must not be empty.
         """
         return self._keys.popleft(), self._values.popleft()
-    
+
     def tail(self, key: K) -> Tuple[K, Tuple[V]]:
         """Returns the most recent key and the values after the given key.
         
