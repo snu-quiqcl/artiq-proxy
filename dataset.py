@@ -1,8 +1,9 @@
 """Module for realtime dataset management."""
 
 import bisect
+import functools
 import itertools
-from collections import deque
+from collections import deque, defaultdict
 from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
@@ -63,8 +64,13 @@ ModificationQueue = SortedQueue[float, Dict[str, Any]]
 class DatasetTracker:
     """Holds dataset modifications and provides searching API."""
 
-    def __init__(self):
-        self._modifications: Dict[str, ModificationQueue] = {}
+    def __init__(self, maxlen: Optional[int] = None):
+        """
+        Args:
+            maxlen: The maximum length of modification queues.
+        """
+        factory = functools.partial(ModificationQueue, maxlen=maxlen)
+        self._modifications = defaultdict[str, ModificationQueue](factory)
 
     def datasets(self) -> Tuple[str]:
         """Returns the available dataset names."""
