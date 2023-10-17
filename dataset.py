@@ -110,7 +110,7 @@ class DatasetTracker:
         """
         queue = self._modifications.get(dataset, None)
         if queue is None:
-            logger.error("Cannot add a modification to dataset %s since it does not exist.", dataset)
+            logger.error("Cannot add modification to dataset %s since it does not exist.", dataset)
             return
         queue.push(timestamp, modification)
 
