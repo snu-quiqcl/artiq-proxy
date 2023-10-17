@@ -141,11 +141,13 @@ def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
     action = mod["action"]
     if action == "init":
         return
-    if action == "setitem" and not mod["path"]:
-        tracker.addDataset(mod["key"])
-        return
-    if action == "delitem" and not mod["path"]:
-        tracker.removeDataset(mod["key"])
+    if not mod["path"]:
+        if action == "setitem":
+            tracker.addDataset(mod["key"])
+        elif action == "delitem":
+            tracker.removeDataset(mod["key"])
+        else:
+            logger.error("Unexpected mod: %s.", mod)
         return
     dataset, *_ = mod.pop("path")
     tracker.add(dataset, time.time(), mod)
