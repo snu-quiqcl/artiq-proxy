@@ -141,5 +141,11 @@ def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
     action = mod["action"]
     if action == "init":
         return
+    if action == "setitem" and not mod["path"]:
+        tracker.addDataset(mod["key"])
+        return
+    if action == "delitem" and not mod["path"]:
+        tracker.removeDataset(mod["key"])
+        return
     dataset, *_ = mod.pop("path")
     tracker.add(dataset, time.time(), mod)
