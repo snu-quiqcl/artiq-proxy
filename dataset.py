@@ -124,7 +124,11 @@ class DatasetTracker:
             timestamp: The last timestamp of the previous update.
               Any modifications added after this timestamp will be returned.
         """
-        return self._modifications[dataset].tail(timestamp)
+        queue = self._modifications.get(dataset, None)
+        if queue is None:
+            logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
+            return
+        return queue.tail(timestamp)
 
 
 def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
