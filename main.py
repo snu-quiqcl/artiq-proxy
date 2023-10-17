@@ -555,6 +555,12 @@ async def get_master_dataset(key: str) -> Union[int, float, List]:
     return array
 
 
+@app.get("/dataset/master/list/")
+async def list_dataset() -> Tuple[str, ...]:
+    """Returns the list of datasets available in artiq master."""
+    return dataset_tracker.datasets()
+
+
 @app.get("/dataset/master/modification/")
 async def get_dataset_modification(
     key: str, timestamp: float

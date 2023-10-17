@@ -76,7 +76,7 @@ class DatasetTracker:
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
 
-    def datasets(self) -> Tuple[str]:
+    def datasets(self) -> Tuple[str, ...]:
         """Returns the available dataset names."""
         return tuple(self._modifications)
 
