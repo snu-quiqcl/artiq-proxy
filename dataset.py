@@ -90,6 +90,16 @@ class DatasetTracker:
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
 
+    def removeDataset(self, dataset: str):
+        """Removes a dataset entry.
+        
+        Args:
+            dataset: Dataset name to remove.
+        """
+        removed = self._modifications.pop(dataset, None)
+        if not removed:
+            logger.error("Cannot remove dataset %s since it does not exist.", dataset)
+
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
         
