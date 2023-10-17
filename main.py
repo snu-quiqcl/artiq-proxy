@@ -119,6 +119,21 @@ def init_dataset_tracker() -> Subscriber:
     return Subscriber("datasets", lambda x: x, notify_cb)
 
 
+async def run_subscriber(subscriber: Subscriber, host: str, port: int):
+    """Connects and runs the subscriber.
+    
+    Args:
+        subscriber: Target subscriber.
+        host: Host IP address or "localhost".
+        port: Port number for subscriber connection.
+    """
+    await subscriber.connect(host, port)
+    try:
+        await subscriber.receive_task
+    finally:
+        await subscriber.close()
+
+
 async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
@@ -137,7 +152,7 @@ async def lifespan(_app: FastAPI):
     load_configs()
     load_device_db()
     init_schedule()
-    init_dataset_tracker()
+    asyncio.create_task(run_subscriber(init_dataset_tracker()))
     await connect_moninj()
     yield
     await mi_connection.close()
