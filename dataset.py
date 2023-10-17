@@ -121,13 +121,14 @@ class DatasetTracker:
         
         Args:
             dataset: Target dataset name.
+              If dataset does not exist, it returns (-1, ()).
             timestamp: The last timestamp of the previous update.
               Any modifications added after this timestamp will be returned.
         """
         queue = self._modifications.get(dataset, None)
         if queue is None:
             logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
-            return
+            return (-1, ())
         return queue.tail(timestamp)
 
 
