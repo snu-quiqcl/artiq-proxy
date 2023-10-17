@@ -108,7 +108,11 @@ class DatasetTracker:
             timestamp: The timestamp of the modification.
             modification: Modification dict, e.g., {"action": "append", "x": value}.
         """
-        self._modifications[dataset].push(timestamp, modification)
+        queue = self._modifications.get(dataset, None)
+        if queue is None:
+            logger.error("Cannot add a modification to dataset %s since it does not exist.", dataset)
+            return
+        queue.push(timestamp, modification)
 
     def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
