@@ -556,7 +556,9 @@ async def get_master_dataset(key: str) -> Union[int, float, List]:
 
 
 @app.get("/dataset/master/modification/")
-async def get_dataset_modification(key: str, timestamp: float) -> Tuple[float, Tuple[dset.Modification, ...]]:
+async def get_dataset_modification(
+    key: str, timestamp: float
+) -> Tuple[float, Tuple[dset.Modification, ...]]:
     """Returns the dataset modifications since the given timestamp.
     
     Args:
