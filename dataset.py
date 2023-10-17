@@ -1,11 +1,10 @@
 """Module for realtime dataset management."""
 
 import bisect
-import functools
 import itertools
 import logging
 import time
-from collections import deque, defaultdict
+from collections import deque
 from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
@@ -74,12 +73,22 @@ class DatasetTracker:
         Args:
             maxlen: The maximum length of modification queues.
         """
-        factory = functools.partial(ModificationQueue, maxlen=maxlen)
-        self._modifications = defaultdict[str, ModificationQueue](factory)
+        self._maxlen = maxlen
+        self._modifications: Dict[str, ModificationQueue] = {}
 
     def datasets(self) -> Tuple[str]:
         """Returns the available dataset names."""
         return tuple(self._modifications)
+
+    def addDataset(self, dataset: str):
+        """Adds a dataset entry.
+        
+        Args:
+            dataset: New dataset name.
+        """
+        if dataset in self._modifications:
+            logger.warning("Dataset %s already exists hence is replaced.", dataset)
+        self._modifications[dataset] = ModificationQueue(self._maxlen)
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
