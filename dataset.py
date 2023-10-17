@@ -80,7 +80,7 @@ class DatasetTracker:
         """Returns the available dataset names."""
         return tuple(self._modifications)
 
-    def addDataset(self, dataset: str):
+    def add_dataset(self, dataset: str):
         """Adds a dataset entry.
         
         Args:
@@ -90,7 +90,7 @@ class DatasetTracker:
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
 
-    def removeDataset(self, dataset: str):
+    def remove_dataset(self, dataset: str):
         """Removes a dataset entry.
         
         Args:
@@ -144,9 +144,9 @@ def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
         return
     if not mod["path"]:
         if action == "setitem":
-            tracker.addDataset(mod["key"])
+            tracker.add_dataset(mod["key"])
         elif action == "delitem":
-            tracker.removeDataset(mod["key"])
+            tracker.remove_dataset(mod["key"])
         else:
             logger.error("Unexpected mod: %s.", mod)
         return
