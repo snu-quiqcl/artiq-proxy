@@ -113,7 +113,7 @@ def init_dataset_tracker() -> Subscriber:
     This should be called after loading config.
     """
     global dataset_tracker
-    maxlen = configs.get("dataset_tracker_maxlen", 1 << 16)
+    maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
     return Subscriber("datasets", lambda x: x, functools.partial(dset.notify_callback, dataset_tracker))
 
