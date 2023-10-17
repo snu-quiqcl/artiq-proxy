@@ -3,11 +3,14 @@
 import bisect
 import functools
 import itertools
+import logging
 import time
 from collections import deque, defaultdict
 from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
+
+logger = logging.getLogger(__name__)
 
 class SortedQueue(Generic[K, V]):
     """Queue of key-value pairs, whose keys are always sorted.
