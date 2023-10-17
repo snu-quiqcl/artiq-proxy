@@ -119,15 +119,12 @@ def init_dataset_tracker() -> Subscriber:
     return Subscriber("datasets", lambda x: x, notify_cb)
 
 
-async def run_subscriber(subscriber: Subscriber, host: str, port: int):
-    """Connects and runs the subscriber.
+async def run_subscriber(subscriber: Subscriber):
+    """Runs the subscriber's receiving task and closes it finally.
     
     Args:
         subscriber: Target subscriber.
-        host: Host IP address or "localhost".
-        port: Port number for subscriber connection.
     """
-    await subscriber.connect(host, port)
     try:
         await subscriber.receive_task
     finally:
