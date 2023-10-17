@@ -29,19 +29,7 @@ import dataset as dset
 
 logger = logging.getLogger(__name__)
 
-configs = {  # default values
-    "repository_path": "repository/",
-    "result_path": "results/",
-    "core_addr": "192.168.1.75",
-    "master_addr": "localhost",
-    "device_db_path": "device_db.py",
-    "ttl_devices": [],
-    "dac_devices": {},
-    "dataset_tracker": {
-        "port": 3250,
-        "maxlen": None,
-    },
-}
+configs = {}
 
 device_db = {}
 
