@@ -97,7 +97,7 @@ class DatasetTracker:
             dataset: Dataset name to remove.
         """
         removed = self._modifications.pop(dataset, None)
-        if not removed:
+        if removed is None:
             logger.error("Cannot remove dataset %s since it does not exist.", dataset)
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
