@@ -112,7 +112,7 @@ async def init_dataset_tracker():
     
     This should be called after loading config.
     """
-    global dataset_tracker
+    global dataset_tracker  # pylint: disable=global-statement
     maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
     notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
