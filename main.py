@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Tuple, Optional, Union
 
 import h5py
 import numpy as np
@@ -553,6 +553,17 @@ async def get_master_dataset(key: str) -> Union[int, float, List]:
     if isinstance(array, np.ndarray):
         array = array.tolist()
     return array
+
+
+@app.get("/dataset/master/modification/")
+async def get_dataset_modification(key: str, timestamp: float) -> Tuple[float, Tuple[dset.Modification, ...]]:
+    """Returns the dataset modifications since the given timestamp.
+    
+    Args:
+        key: The key of the target dataset.
+        timestamp: The timestamp of the last update. See dataset.DatasetTracker.since().
+    """
+    return dataset_tracker.since(key, timestamp)
 
 
 class ResultFileType(str, Enum):
