@@ -108,7 +108,8 @@ def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
         tracker: Target dataset tracket object.
         mod: The argument of notify_cb() called by sipyco.sync_struct.Subscriber.
     """
-    if mod["action"] == "init":
+    action = mod["action"]
+    if action == "init":
         return
     dataset, *_ = mod.pop("path")
     tracker.add(dataset, time.time(), mod)
