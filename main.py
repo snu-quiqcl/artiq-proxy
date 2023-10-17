@@ -108,7 +108,7 @@ def init_schedule():
 
 
 def init_dataset_tracker() -> Subscriber:
-    """Initializes the dataset tracker.
+    """Initializes the dataset tracker and returns the subscriber object.
     
     This should be called after loading config.
     """
