@@ -41,7 +41,7 @@ class SortedQueue(Generic[K, V]):
         """
         return self._keys.popleft(), self._values.popleft()
 
-    def tail(self, key: K) -> Tuple[K, Tuple[V]]:
+    def tail(self, key: K) -> Tuple[K, Tuple[V, ...]]:
         """Returns the most recent key and the values after the given key.
         
         Args:
@@ -88,7 +88,7 @@ class DatasetTracker:
         """
         self._modifications[dataset].push(timestamp, modification)
 
-    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification]]:
+    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
 
         See SortedQueue.tail() for details.
