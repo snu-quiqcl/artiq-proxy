@@ -137,7 +137,7 @@ async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
         """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement, invalid-name
+    global mi_connection  # pylint: disable=global-statement
     mi_connection = CommMonInj(do_nothing, do_nothing)
     await mi_connection.connect(configs["core_addr"])
 
