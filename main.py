@@ -71,7 +71,8 @@ def load_configs():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "core_addr": {core_addr_ip},
+        "core_addr": {core_ip},
+        "master_addr": {artiq_master_ip},
         "device_db_path": {device_db_path},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": {
