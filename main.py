@@ -80,7 +80,10 @@ def load_configs():
             {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
             ...
         },
-        "dataset_tracker_maxlen": {maxlen}  # optional
+        "dataset_tracker": {
+            "port": {port},
+            "maxlen": {maxlen}
+        }
       }
     """
     with open("config.json", encoding="utf-8") as config_file:
