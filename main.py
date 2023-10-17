@@ -107,8 +107,8 @@ def init_schedule():
     latest_schedule.update(queue)
 
 
-def init_dataset_tracker() -> Subscriber:
-    """Initializes the dataset tracker and returns the subscriber object.
+async def init_dataset_tracker():
+    """Initializes the dataset tracker and runs the subscriber.
     
     This should be called after loading config.
     """
@@ -116,7 +116,9 @@ def init_dataset_tracker() -> Subscriber:
     maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
     notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
-    return Subscriber("datasets", lambda x: x, notify_cb)
+    subscriber = Subscriber("datasets", lambda x: x, notify_cb)
+    await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
+    asyncio.create_task(run_subscriber(subscriber))
 
 
 async def run_subscriber(subscriber: Subscriber):
@@ -149,7 +151,7 @@ async def lifespan(_app: FastAPI):
     load_configs()
     load_device_db()
     init_schedule()
-    asyncio.create_task(run_subscriber(init_dataset_tracker()))
+    await init_dataset_tracker()
     await connect_moninj()
     yield
     await mi_connection.close()
