@@ -66,13 +66,19 @@ ModificationQueue = SortedQueue[float, Modification]
 
 
 class DatasetTracker:
-    """Holds dataset modifications and provides searching API."""
+    """Holds dataset modifications and provides searching API.
+    
+    Attributes:
+        modified: Dict(key=dataset_name, value=event) where the event is set
+          when any new modification to the dataset is added.
+    """
 
     def __init__(self, maxlen: Optional[int] = None):
         """
         Args:
             maxlen: The maximum length of modification queues.
         """
+        self.modified: Dict[str, asyncio.Event] = {}
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
         self._last_deleted: Dict[str, float] = {}
