@@ -80,6 +80,11 @@ def load_configs():
             {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
             ...
         },
+        "dds_devices": {
+            {dds_device0}: [{dds_device0_channel0}, {dds_device0_channel1}, ... ],
+            {dds_device1}: [{dds_device1_channel0}, {dds_device1_channel1}, ... ],
+            ...
+        },
         "dataset_tracker": {
             "port": {port},
             "maxlen": {maxlen}
