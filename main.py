@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
