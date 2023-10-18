@@ -580,7 +580,7 @@ async def get_dataset_modification(
         timeout: The timeout in seconds for awaiting new modifications.
           None for no timeout (wait until done), and 0 or negative for non-blocking.
           The actual execution time might exceed the timeout because of the
-          first since() call. Although the timeout becomes less precise,
+          since() calls are not timed. Although the timeout becomes less precise,
           it can guarantee a valid return value for even short timeouts.
     """
     latest, modifications = dataset_tracker.since(key, timestamp)
