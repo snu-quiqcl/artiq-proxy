@@ -145,6 +145,18 @@ class DatasetTracker:
             return (-1, ())
         return queue.tail(timestamp)
 
+    def _notify_modified(self, dataset: str):
+        """Sets and clears the modified event.
+
+        All the coroutines that are waiting for the modified event will be awakened.
+        
+        Args:
+            dataset: Target dataset name.
+        """
+        modified = self.modified[dataset]
+        modified.set()
+        modified.clear()
+
 
 def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
     """Adds modification to the tracker called as notify_cb() of sipyco system.
