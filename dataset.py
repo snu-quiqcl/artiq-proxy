@@ -1,5 +1,6 @@
 """Module for realtime dataset management."""
 
+import asyncio
 import bisect
 import itertools
 import logging
@@ -98,7 +99,9 @@ class DatasetTracker:
         if dataset in self._modifications:
             self._last_deleted[dataset] = time.time()
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
+            self._notify_modified(dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
+        self.modified[dataset] = asyncio.Event()
 
     def remove_dataset(self, dataset: str):
         """Removes a dataset entry.
