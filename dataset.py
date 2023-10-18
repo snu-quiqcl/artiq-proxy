@@ -130,6 +130,7 @@ class DatasetTracker:
             logger.error("Cannot add modification to dataset %s since it does not exist.", dataset)
             return
         queue.push(timestamp, modification)
+        self._notify_modified(dataset)
 
     def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
