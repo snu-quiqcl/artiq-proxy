@@ -572,9 +572,11 @@ async def get_dataset_modification(
 ) -> Tuple[float, Tuple[dset.Modification, ...]]:
     """Returns the dataset modifications since the given timestamp.
     
+    See dataset.DatasetTracker.since() for details.
+
     Args:
         key: The key of the target dataset.
-        timestamp: The timestamp of the last update. See dataset.DatasetTracker.since().
+        timestamp: The timestamp of the last update.
     """
     return dataset_tracker.since(key, timestamp)
 
