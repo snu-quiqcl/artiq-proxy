@@ -114,6 +114,8 @@ class DatasetTracker:
             logger.error("Cannot remove dataset %s since it does not exist.", dataset)
             return
         self._last_deleted[dataset] = time.time()
+        self._notify_modified(dataset)
+        self.modified.pop(dataset)
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
