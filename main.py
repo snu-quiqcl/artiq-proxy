@@ -587,8 +587,7 @@ async def get_dataset_modification(
     if modifications or latest < 0 or timeout <= 0:
         return latest, modifications
     try:
-        async with asyncio.timeout(timeout):
-            await dataset_tracker.modified[key].wait()
+        await asyncio.wait_for(dataset_tracker.modified[key].wait(), timeout)
     except asyncio.TimeoutError:
         return latest, modifications
     return dataset_tracker.since(key, timestamp)
