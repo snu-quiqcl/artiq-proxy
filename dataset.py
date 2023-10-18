@@ -116,14 +116,15 @@ class DatasetTracker:
 
     def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
-
-        See SortedQueue.tail() for details.
         
         Args:
             dataset: Target dataset name.
-              If dataset does not exist, it returns (-1, ()).
             timestamp: The last timestamp of the previous update.
               Any modifications added after this timestamp will be returned.
+        
+        Returns:
+            If dataset does not exist, it returns (-1, ()).
+            Otherwise, see SortedQueue.tail().
         """
         queue = self._modifications.get(dataset, None)
         if queue is None:
