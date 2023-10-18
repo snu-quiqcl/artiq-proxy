@@ -1,6 +1,9 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
+import asyncio
+import copy
+import functools
 import importlib.util
 import json
 import logging
@@ -8,12 +11,10 @@ import os
 import posixpath
 import shutil
 import time
-import copy
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -22,6 +23,9 @@ from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
+from sipyco.sync_struct import Subscriber
+
+import dataset as dset
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +34,8 @@ configs = {}
 device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
+
+dataset_tracker: Optional[dset.DatasetTracker] = None
 
 class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
@@ -65,12 +71,23 @@ def load_configs():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
+        "core_addr": {core_ip},
+        "master_addr": {artiq_master_ip},
         "device_db_path": {device_db_path},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": {
             {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
             {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
             ...
+        },
+        "dds_devices": {
+            {dds_device0}: [{dds_device0_channel0}, {dds_device0_channel1}, ... ],
+            {dds_device1}: [{dds_device1_channel0}, {dds_device1_channel1}, ... ],
+            ...
+        },
+        "dataset_tracker": {
+            "port": {port},
+            "maxlen": {maxlen}
         }
       }
     """
@@ -88,6 +105,18 @@ def load_device_db():
     device_db.update(module.device_db)
 
 
+async def run_subscriber(subscriber: Subscriber):
+    """Runs the subscriber's receiving task and closes it finally.
+    
+    Args:
+        subscriber: Target subscriber.
+    """
+    try:
+        await subscriber.receive_task
+    finally:
+        await subscriber.close()
+
+
 def init_schedule():
     """Initializes the schedule info to the latest."""
     remote = get_client("master_schedule")
@@ -95,11 +124,25 @@ def init_schedule():
     latest_schedule.update(queue)
 
 
+async def init_dataset_tracker() -> asyncio.Task:
+    """Initializes the dataset tracker and runs the subscriber.
+    
+    This should be called after loading config.
+    """
+    global dataset_tracker  # pylint: disable=global-statement
+    maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
+    dataset_tracker = dset.DatasetTracker(maxlen)
+    notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
+    subscriber = Subscriber("datasets", lambda x: x, notify_cb)
+    await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
+    return asyncio.create_task(run_subscriber(subscriber))
+
+
 async def connect_moninj():
     """Creates a CommMonInj instance and connects it to ARTIQ."""
     def do_nothing(*_):
         """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement, invalid-name
+    global mi_connection  # pylint: disable=global-statement
     mi_connection = CommMonInj(do_nothing, do_nothing)
     await mi_connection.connect(configs["core_addr"])
 
@@ -113,6 +156,7 @@ async def lifespan(_app: FastAPI):
     load_configs()
     load_device_db()
     init_schedule()
+    _task = await init_dataset_tracker()
     await connect_moninj()
     yield
     await mi_connection.close()
@@ -514,6 +558,27 @@ async def get_master_dataset(key: str) -> Union[int, float, List]:
     if isinstance(array, np.ndarray):
         array = array.tolist()
     return array
+
+
+@app.get("/dataset/master/list/")
+async def list_dataset() -> Tuple[str, ...]:
+    """Returns the list of datasets available in artiq master."""
+    return dataset_tracker.datasets()
+
+
+@app.get("/dataset/master/modification/")
+async def get_dataset_modification(
+    key: str, timestamp: float
+) -> Tuple[float, Tuple[dset.Modification, ...]]:
+    """Returns the dataset modifications since the given timestamp.
+    
+    See dataset.DatasetTracker.since() for details.
+
+    Args:
+        key: The key of the target dataset.
+        timestamp: The timestamp of the last update.
+    """
+    return dataset_tracker.since(key, timestamp)
 
 
 class ResultFileType(str, Enum):

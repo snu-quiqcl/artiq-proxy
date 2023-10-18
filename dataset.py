@@ -1,12 +1,15 @@
 """Module for realtime dataset management."""
 
 import bisect
-import functools
 import itertools
-from collections import deque, defaultdict
+import logging
+import time
+from collections import deque
 from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
+
+logger = logging.getLogger(__name__)
 
 class SortedQueue(Generic[K, V]):
     """Queue of key-value pairs, whose keys are always sorted.
@@ -40,7 +43,7 @@ class SortedQueue(Generic[K, V]):
         """
         return self._keys.popleft(), self._values.popleft()
 
-    def tail(self, key: K) -> Tuple[K, Tuple[V]]:
+    def tail(self, key: K) -> Tuple[K, Tuple[V, ...]]:
         """Returns the most recent key and the values after the given key.
         
         Args:
@@ -70,12 +73,32 @@ class DatasetTracker:
         Args:
             maxlen: The maximum length of modification queues.
         """
-        factory = functools.partial(ModificationQueue, maxlen=maxlen)
-        self._modifications = defaultdict[str, ModificationQueue](factory)
+        self._maxlen = maxlen
+        self._modifications: Dict[str, ModificationQueue] = {}
 
-    def datasets(self) -> Tuple[str]:
+    def datasets(self) -> Tuple[str, ...]:
         """Returns the available dataset names."""
         return tuple(self._modifications)
+
+    def add_dataset(self, dataset: str):
+        """Adds a dataset entry.
+        
+        Args:
+            dataset: New dataset name.
+        """
+        if dataset in self._modifications:
+            logger.warning("Dataset %s already exists hence is replaced.", dataset)
+        self._modifications[dataset] = ModificationQueue(self._maxlen)
+
+    def remove_dataset(self, dataset: str):
+        """Removes a dataset entry.
+        
+        Args:
+            dataset: Dataset name to remove.
+        """
+        removed = self._modifications.pop(dataset, None)
+        if removed is None:
+            logger.error("Cannot remove dataset %s since it does not exist.", dataset)
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
@@ -85,16 +108,48 @@ class DatasetTracker:
             timestamp: The timestamp of the modification.
             modification: Modification dict, e.g., {"action": "append", "x": value}.
         """
-        self._modifications[dataset].push(timestamp, modification)
+        queue = self._modifications.get(dataset, None)
+        if queue is None:
+            logger.error("Cannot add modification to dataset %s since it does not exist.", dataset)
+            return
+        queue.push(timestamp, modification)
 
-    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification]]:
+    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
-
-        See SortedQueue.tail() for details.
         
         Args:
             dataset: Target dataset name.
             timestamp: The last timestamp of the previous update.
               Any modifications added after this timestamp will be returned.
+        
+        Returns:
+            If dataset does not exist, it returns (-1, ()).
+            Otherwise, see SortedQueue.tail().
         """
-        return self._modifications[dataset].tail(timestamp)
+        queue = self._modifications.get(dataset, None)
+        if queue is None:
+            logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
+            return (-1, ())
+        return queue.tail(timestamp)
+
+
+def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
+    """Adds modification to the tracker called as notify_cb() of sipyco system.
+    
+    Args:
+        tracker: Target dataset tracket object.
+        mod: The argument of notify_cb() called by sipyco.sync_struct.Subscriber.
+    """
+    action = mod["action"]
+    if action == "init":
+        return
+    if not mod["path"]:
+        if action == "setitem":
+            tracker.add_dataset(mod["key"])
+        elif action == "delitem":
+            tracker.remove_dataset(mod["key"])
+        else:
+            logger.error("Unexpected mod: %s.", mod)
+        return
+    dataset, *_ = mod.pop("path")
+    tracker.add(dataset, time.time(), mod)
