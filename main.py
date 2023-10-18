@@ -105,6 +105,18 @@ def load_device_db():
     device_db.update(module.device_db)
 
 
+async def run_subscriber(subscriber: Subscriber):
+    """Runs the subscriber's receiving task and closes it finally.
+    
+    Args:
+        subscriber: Target subscriber.
+    """
+    try:
+        await subscriber.receive_task
+    finally:
+        await subscriber.close()
+
+
 def init_schedule():
     """Initializes the schedule info to the latest."""
     remote = get_client("master_schedule")
@@ -124,18 +136,6 @@ async def init_dataset_tracker() -> asyncio.Task:
     subscriber = Subscriber("datasets", lambda x: x, notify_cb)
     await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
     return asyncio.create_task(run_subscriber(subscriber))
-
-
-async def run_subscriber(subscriber: Subscriber):
-    """Runs the subscriber's receiving task and closes it finally.
-    
-    Args:
-        subscriber: Target subscriber.
-    """
-    try:
-        await subscriber.receive_task
-    finally:
-        await subscriber.close()
 
 
 async def connect_moninj():
