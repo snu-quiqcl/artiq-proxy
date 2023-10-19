@@ -568,7 +568,7 @@ async def list_dataset() -> Tuple[str, ...]:
 
 @app.get("/dataset/master/modification/")
 async def get_dataset_modification(
-    key: str, timestamp: float
+    key: str, timestamp: float, timeout: Optional[float],
 ) -> Tuple[float, Tuple[dset.Modification, ...]]:
     """Returns the dataset modifications since the given timestamp.
     
@@ -577,7 +577,19 @@ async def get_dataset_modification(
     Args:
         key: The key of the target dataset.
         timestamp: The timestamp of the last update.
+        timeout: The timeout in seconds for awaiting new modifications.
+          None for no timeout (wait until done), and 0 or negative for non-blocking.
+          The actual execution time might exceed the timeout because of the
+          since() calls are not timed. Although the timeout becomes less precise,
+          it can guarantee a valid return value for even short timeouts.
     """
+    latest, modifications = dataset_tracker.since(key, timestamp)
+    if modifications or latest < 0 or (timeout is not None and timeout <= 0):
+        return latest, modifications
+    try:
+        await asyncio.wait_for(dataset_tracker.modified[key].wait(), timeout)
+    except asyncio.TimeoutError:
+        return latest, modifications
     return dataset_tracker.since(key, timestamp)
 
 

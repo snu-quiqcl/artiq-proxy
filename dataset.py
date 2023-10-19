@@ -1,5 +1,6 @@
 """Module for realtime dataset management."""
 
+import asyncio
 import bisect
 import itertools
 import logging
@@ -66,13 +67,19 @@ ModificationQueue = SortedQueue[float, Modification]
 
 
 class DatasetTracker:
-    """Holds dataset modifications and provides searching API."""
+    """Holds dataset modifications and provides searching API.
+    
+    Attributes:
+        modified: Dict(key=dataset_name, value=event) where the event is set
+          when any new modification to the dataset is added.
+    """
 
     def __init__(self, maxlen: Optional[int] = None):
         """
         Args:
             maxlen: The maximum length of modification queues.
         """
+        self.modified: Dict[str, asyncio.Event] = {}
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
         self._last_deleted: Dict[str, float] = {}
@@ -92,7 +99,9 @@ class DatasetTracker:
         if dataset in self._modifications:
             self._last_deleted[dataset] = time.time()
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
+            self._notify_modified(dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
+        self.modified[dataset] = asyncio.Event()
 
     def remove_dataset(self, dataset: str):
         """Removes a dataset entry.
@@ -105,6 +114,8 @@ class DatasetTracker:
             logger.error("Cannot remove dataset %s since it does not exist.", dataset)
             return
         self._last_deleted[dataset] = time.time()
+        self._notify_modified(dataset)
+        self.modified.pop(dataset)
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
@@ -119,6 +130,7 @@ class DatasetTracker:
             logger.error("Cannot add modification to dataset %s since it does not exist.", dataset)
             return
         queue.push(timestamp, modification)
+        self._notify_modified(dataset)
 
     def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
@@ -144,6 +156,18 @@ class DatasetTracker:
             logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
             return (-1, ())
         return queue.tail(timestamp)
+
+    def _notify_modified(self, dataset: str):
+        """Sets and clears the modified event.
+
+        All the coroutines that are waiting for the modified event will be awakened.
+        
+        Args:
+            dataset: Target dataset name.
+        """
+        modified = self.modified[dataset]
+        modified.set()
+        modified.clear()
 
 
 def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
