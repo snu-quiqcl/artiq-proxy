@@ -80,7 +80,7 @@ class DatasetTracker:
             maxlen: The maximum length of modification queues.
         """
         self.modified: Dict[str, asyncio.Event] = {}
-        self._target: Any = None
+        self._target: Optional[Dict[str, Any]] = None
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
         self._last_deleted: Dict[str, float] = {}
@@ -158,7 +158,7 @@ class DatasetTracker:
             return (-1, ())
         return queue.tail(timestamp)
 
-    def target_builder(self, struct: Any):
+    def target_builder(self, struct: Dict[str, Any]):
         """Initializes the target with the given struct.
         
         See sipyco.sync_struct.Subscriber for details.
