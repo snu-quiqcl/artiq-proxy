@@ -172,7 +172,7 @@ class DatasetTracker:
         value = None if self._target is None else self._target.get(key, None)
         return time.time(), value
 
-    def target_builder(self, struct: Dict[str, Any]):
+    def target_builder(self, struct: Dict[str, Any]) -> Dict[str, Any]:
         """Initializes the target with the given struct.
         
         See sipyco.sync_struct.Subscriber for details.
