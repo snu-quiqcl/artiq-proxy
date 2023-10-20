@@ -553,9 +553,7 @@ async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
     Args:
         key: The key of the target dataset.
     """
-    remote = get_client("master_dataset_db")
-    array = remote.get(key)
-    timestamp = time.time()
+    timestamp, array = dataset_tracker.get(key)
     if isinstance(array, np.ndarray):
         array = array.tolist()
     return timestamp, array
