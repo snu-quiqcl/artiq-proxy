@@ -165,11 +165,12 @@ class DatasetTracker:
             key: The key (name) of the dataset.
         
         Returns:
-            (timestamp, value): If the dataset is not initialized yet or there is
-              no dataset with the given key, value is None. timestamp is always
-              the current time.
+            If the dataset is not initialized yet or there is no dataset with
+              the given key, it returns (-1, ()).
         """
-        value = None if self._target is None else self._target.get(key, None)
+        value = self._target.get(key, None)
+        if value is None:
+            return -1, ()
         return time.time(), value
 
     def target_builder(self, struct: Dict[str, Any]) -> Dict[str, Any]:
