@@ -160,6 +160,8 @@ class DatasetTracker:
 
     def get(self, key: str) -> Tuple[float, Any]:
         """Returns the current timestamp and target dataset contents.
+
+        See artiq.master.databases.DatasetDB for detailed target structure.
         
         Args:
             key: The key (name) of the dataset.
@@ -171,7 +173,7 @@ class DatasetTracker:
         value = self._target.get(key, None)
         if value is None:
             return -1, ()
-        return time.time(), value
+        return time.time(), value[1]  # value = persist, data, metadata
 
     def target_builder(self, struct: Dict[str, Any]) -> Dict[str, Any]:
         """Initializes the target with the given struct.
