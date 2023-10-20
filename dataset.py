@@ -80,6 +80,7 @@ class DatasetTracker:
             maxlen: The maximum length of modification queues.
         """
         self.modified: Dict[str, asyncio.Event] = {}
+        self._target: Any = None
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
         self._last_deleted: Dict[str, float] = {}
@@ -156,6 +157,19 @@ class DatasetTracker:
             logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
             return (-1, ())
         return queue.tail(timestamp)
+
+    def target_builder(self, struct: Any):
+        """Initializes the target with the given struct.
+        
+        See sipyco.sync_struct.Subscriber for details.
+
+        This will make self._target the synchronized structure of the notifier.
+
+        Args:
+            struct: The initial structure for the target.
+        """
+        self._target = struct
+        return self._target
 
     def _notify_modified(self, dataset: str):
         """Sets and clears the modified event.
