@@ -158,6 +158,20 @@ class DatasetTracker:
             return (-1, ())
         return queue.tail(timestamp)
 
+    def get(self, key: str) -> Tuple[float, Any]:
+        """Returns the current timestamp and target dataset contents.
+        
+        Args:
+            key: The key (name) of the dataset.
+        
+        Returns:
+            (timestamp, value): If the dataset is not initialized yet or there is
+              no dataset with the given key, value is None. timestamp is always
+              the current time.
+        """
+        value = None if self._target is None else self._target.get(key, None)
+        return time.time(), value
+
     def target_builder(self, struct: Dict[str, Any]):
         """Initializes the target with the given struct.
         
