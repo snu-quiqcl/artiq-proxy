@@ -547,17 +547,18 @@ async def list_result_directory() -> List[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> Union[int, float, List]:
-    """Returns the dataset broadcast to artiq master.
+async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
+    """Returns the current timestamp and the dataset broadcast to artiq master.
     
     Args:
         key: The key of the target dataset.
     """
     remote = get_client("master_dataset_db")
     array = remote.get(key)
+    timestamp = time.time()
     if isinstance(array, np.ndarray):
         array = array.tolist()
-    return array
+    return timestamp, array
 
 
 @app.get("/dataset/master/list/")
