@@ -133,7 +133,7 @@ async def init_dataset_tracker() -> asyncio.Task:
     maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
     notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
-    subscriber = Subscriber("datasets", lambda x: x, notify_cb)
+    subscriber = Subscriber("datasets", dataset_tracker.target_builder, notify_cb)
     await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
     return asyncio.create_task(run_subscriber(subscriber))
 
@@ -549,13 +549,14 @@ async def list_result_directory() -> List[int]:
 @app.get("/dataset/master/")
 async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
     """Returns the current timestamp and the dataset broadcast to artiq master.
-    
+
     Args:
         key: The key of the target dataset.
+
+    Returns:
+        If the dataset is not initialized or does not exist, it returns (-1, ()).
     """
-    remote = get_client("master_dataset_db")
-    array = remote.get(key)
-    timestamp = time.time()
+    timestamp, array = dataset_tracker.get(key)
     if isinstance(array, np.ndarray):
         array = array.tolist()
     return timestamp, array

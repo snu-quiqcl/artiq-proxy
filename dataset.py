@@ -80,6 +80,7 @@ class DatasetTracker:
             maxlen: The maximum length of modification queues.
         """
         self.modified: Dict[str, asyncio.Event] = {}
+        self._target: Optional[Dict[str, Any]] = None
         self._maxlen = maxlen
         self._modifications: Dict[str, ModificationQueue] = {}
         self._last_deleted: Dict[str, float] = {}
@@ -156,6 +157,36 @@ class DatasetTracker:
             logger.error("Cannot call since() for dataset %s since it does not exist.", dataset)
             return (-1, ())
         return queue.tail(timestamp)
+
+    def get(self, key: str) -> Tuple[float, Any]:
+        """Returns the current timestamp and target dataset contents.
+
+        See artiq.master.databases.DatasetDB for detailed target structure.
+        
+        Args:
+            key: The key (name) of the dataset.
+        
+        Returns:
+            If the dataset is not initialized yet or there is no dataset with
+              the given key, it returns (-1, ()).
+        """
+        value = self._target.get(key, None)
+        if value is None:
+            return -1, ()
+        return time.time(), value[1]  # value = persist, data, metadata
+
+    def target_builder(self, struct: Dict[str, Any]) -> Dict[str, Any]:
+        """Initializes the target with the given struct.
+        
+        See sipyco.sync_struct.Subscriber for details.
+
+        This will make self._target the synchronized structure of the notifier.
+
+        Args:
+            struct: The initial structure for the target.
+        """
+        self._target = struct
+        return self._target
 
     def _notify_modified(self, dataset: str):
         """Sets and clears the modified event.
