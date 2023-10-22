@@ -465,7 +465,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
     submission_time_str, visualize = metadata["submission_time"], metadata["visualize"]
     submission_time = datetime.fromisoformat(submission_time_str)
     date = submission_time.date().isoformat()
-    hour = submission_time.hour
+    hour = str(submission_time.hour).zfill(2)
     # find the result file
     datetime_result_dir_path = posixpath.join(result_dir_path, f"{date}/{hour}/")
     padded_rid = rid.zfill(9)
