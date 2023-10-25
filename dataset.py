@@ -6,7 +6,7 @@ import itertools
 import logging
 import time
 from collections import deque
-from typing import Any, Dict, Optional, Tuple, TypeVar, Generic
+from typing import Any, Optional, Tuple, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
 
@@ -62,7 +62,7 @@ class SortedQueue(Generic[K, V]):
         return latest_key, values
 
 
-Modification = Dict[str, Any]
+Modification = dict[str, Any]
 ModificationQueue = SortedQueue[float, Modification]
 
 
@@ -79,11 +79,11 @@ class DatasetTracker:
         Args:
             maxlen: The maximum length of modification queues.
         """
-        self.modified: Dict[str, asyncio.Event] = {}
-        self._target: Optional[Dict[str, Any]] = None
+        self.modified: dict[str, asyncio.Event] = {}
+        self._target: Optional[dict[str, Any]] = None
         self._maxlen = maxlen
-        self._modifications: Dict[str, ModificationQueue] = {}
-        self._last_deleted: Dict[str, float] = {}
+        self._modifications: dict[str, ModificationQueue] = {}
+        self._last_deleted: dict[str, float] = {}
 
     def datasets(self) -> Tuple[str, ...]:
         """Returns the available dataset names."""
@@ -175,7 +175,7 @@ class DatasetTracker:
             return -1, ()
         return time.time(), value[1]  # value = persist, data, metadata
 
-    def target_builder(self, struct: Dict[str, Any]) -> Dict[str, Any]:
+    def target_builder(self, struct: dict[str, Any]) -> dict[str, Any]:
         """Initializes the target with the given struct.
         
         See sipyco.sync_struct.Subscriber for details.
@@ -201,7 +201,7 @@ class DatasetTracker:
         modified.clear()
 
 
-def notify_callback(tracker: DatasetTracker, mod: Dict[str, Any]):
+def notify_callback(tracker: DatasetTracker, mod: dict[str, Any]):
     """Adds modification to the tracker called as notify_cb() of sipyco system.
     
     Args:
