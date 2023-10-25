@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -47,9 +47,9 @@ class ScheduleInfo(pydantic.BaseModel):
           "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
     """
     updated_time: Optional[float] = None
-    queue: Optional[Dict[int, Dict[str, Any]]] = None
+    queue: Optional[dict[int, dict[str, Any]]] = None
 
-    def update(self, queue: Dict[int, Dict[str, Any]]):
+    def update(self, queue: dict[int, dict[str, Any]]):
         """Updates the schedule info.
         
         Args:
@@ -200,10 +200,10 @@ class ExperimentInfo(pydantic.BaseModel):
           the default value, and the additional information for the argument.
     """
     name: str
-    arginfo: Dict[str, Any]
+    arginfo: dict[str, Any]
 
 
-@app.get("/experiment/info/", response_model=Dict[str, ExperimentInfo])
+@app.get("/experiment/info/", response_model=dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
     """Gets information of the given experiment file and returns it.
     
