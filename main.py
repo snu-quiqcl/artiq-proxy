@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import h5py
 import numpy as np
@@ -547,7 +547,7 @@ async def list_result_directory() -> list[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, list]]:
+async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
     """Returns the current timestamp and the dataset broadcast to artiq master.
 
     Args:
@@ -563,7 +563,7 @@ async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, list]]:
 
 
 @app.get("/dataset/master/list/")
-async def list_dataset() -> Tuple[str, ...]:
+async def list_dataset() -> tuple[str, ...]:
     """Returns the list of datasets available in artiq master."""
     return dataset_tracker.datasets()
 
@@ -571,7 +571,7 @@ async def list_dataset() -> Tuple[str, ...]:
 @app.get("/dataset/master/modification/")
 async def get_dataset_modification(
     key: str, timestamp: float, timeout: Optional[float],
-) -> Tuple[float, Tuple[dset.Modification, ...]]:
+) -> tuple[float, tuple[dset.Modification, ...]]:
     """Returns the dataset modifications since the given timestamp.
     
     See dataset.DatasetTracker.since() for details.
