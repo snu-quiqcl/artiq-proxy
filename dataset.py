@@ -6,7 +6,7 @@ import itertools
 import logging
 import time
 from collections import deque
-from typing import Any, Optional, Tuple, TypeVar, Generic
+from typing import Any, Optional, TypeVar, Generic
 
 K, V = TypeVar("K"), TypeVar("V")
 
@@ -37,14 +37,14 @@ class SortedQueue(Generic[K, V]):
         self._keys.append(key)
         self._values.append(value)
 
-    def pop(self) -> Tuple[K, V]:
+    def pop(self) -> tuple[K, V]:
         """Removes and returns the key-value pair at the front of the queue.
         
         The queue must not be empty.
         """
         return self._keys.popleft(), self._values.popleft()
 
-    def tail(self, key: K) -> Tuple[K, Tuple[V, ...]]:
+    def tail(self, key: K) -> tuple[K, tuple[V, ...]]:
         """Returns the most recent key and the values after the given key.
         
         Args:
@@ -85,7 +85,7 @@ class DatasetTracker:
         self._modifications: dict[str, ModificationQueue] = {}
         self._last_deleted: dict[str, float] = {}
 
-    def datasets(self) -> Tuple[str, ...]:
+    def datasets(self) -> tuple[str, ...]:
         """Returns the available dataset names."""
         return tuple(self._modifications)
 
@@ -133,7 +133,7 @@ class DatasetTracker:
         queue.push(timestamp, modification)
         self._notify_modified(dataset)
 
-    def since(self, dataset: str, timestamp: float) -> Tuple[float, Tuple[Modification, ...]]:
+    def since(self, dataset: str, timestamp: float) -> tuple[float, tuple[Modification, ...]]:
         """Returns the latest timestamp and modifications since the given timestamp.
         
         Args:
@@ -158,7 +158,7 @@ class DatasetTracker:
             return (-1, ())
         return queue.tail(timestamp)
 
-    def get(self, key: str) -> Tuple[float, Any]:
+    def get(self, key: str) -> tuple[float, Any]:
         """Returns the current timestamp and target dataset contents.
 
         See artiq.master.databases.DatasetDB for detailed target structure.
