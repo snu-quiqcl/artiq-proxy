@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -166,7 +166,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/ls/")
-async def list_directory(directory: str = "") -> List[str]:
+async def list_directory(directory: str = "") -> list[str]:
     """Gets the list of elements in the given path and returns it.
 
     The "master_path" and "repository_path" in the configuration file 
@@ -265,7 +265,7 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
-def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
+def add_tracking_line(stmt_list: list[ast.stmt]) -> list[ast.stmt]:
     """Returns a new statements list interleaved with rtio logs for tracking each line.
 
     Adds logs containing the corresponding line number before each line, recursively.
@@ -517,7 +517,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
 
 
 @app.get("/result/")
-async def list_result_directory() -> List[int]:
+async def list_result_directory() -> list[int]:
     """Post-processes the executed experiments and returns the RID list.
 
     It performs the following:
@@ -547,7 +547,7 @@ async def list_result_directory() -> List[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
+async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, list]]:
     """Returns the current timestamp and the dataset broadcast to artiq master.
 
     Args:
