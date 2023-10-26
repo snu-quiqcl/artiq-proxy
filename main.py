@@ -14,7 +14,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import h5py
 import numpy as np
@@ -47,9 +47,9 @@ class ScheduleInfo(pydantic.BaseModel):
           "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
     """
     updated_time: Optional[float] = None
-    queue: Optional[Dict[int, Dict[str, Any]]] = None
+    queue: Optional[dict[int, dict[str, Any]]] = None
 
-    def update(self, queue: Dict[int, Dict[str, Any]]):
+    def update(self, queue: dict[int, dict[str, Any]]):
         """Updates the schedule info.
         
         Args:
@@ -166,7 +166,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/ls/")
-async def list_directory(directory: str = "") -> List[str]:
+async def list_directory(directory: str = "") -> list[str]:
     """Gets the list of elements in the given path and returns it.
 
     The "master_path" and "repository_path" in the configuration file 
@@ -200,10 +200,10 @@ class ExperimentInfo(pydantic.BaseModel):
           the default value, and the additional information for the argument.
     """
     name: str
-    arginfo: Dict[str, Any]
+    arginfo: dict[str, Any]
 
 
-@app.get("/experiment/info/", response_model=Dict[str, ExperimentInfo])
+@app.get("/experiment/info/", response_model=dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
     """Gets information of the given experiment file and returns it.
     
@@ -265,7 +265,7 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
-def add_tracking_line(stmt_list: List[ast.stmt]) -> List[ast.stmt]:
+def add_tracking_line(stmt_list: list[ast.stmt]) -> list[ast.stmt]:
     """Returns a new statements list interleaved with rtio logs for tracking each line.
 
     Adds logs containing the corresponding line number before each line, recursively.
@@ -517,7 +517,7 @@ def organize_result_directory(result_dir_path: str, rid: str) -> bool:
 
 
 @app.get("/result/")
-async def list_result_directory() -> List[int]:
+async def list_result_directory() -> list[int]:
     """Post-processes the executed experiments and returns the RID list.
 
     It performs the following:
@@ -547,7 +547,7 @@ async def list_result_directory() -> List[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
+async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
     """Returns the current timestamp and the dataset broadcast to artiq master.
 
     Args:
@@ -563,7 +563,7 @@ async def get_master_dataset(key: str) -> Tuple[float, Union[int, float, List]]:
 
 
 @app.get("/dataset/master/list/")
-async def list_dataset() -> Tuple[str, ...]:
+async def list_dataset() -> tuple[str, ...]:
     """Returns the list of datasets available in artiq master."""
     return dataset_tracker.datasets()
 
@@ -571,7 +571,7 @@ async def list_dataset() -> Tuple[str, ...]:
 @app.get("/dataset/master/modification/")
 async def get_dataset_modification(
     key: str, timestamp: float, timeout: Optional[float],
-) -> Tuple[float, Tuple[dset.Modification, ...]]:
+) -> tuple[float, tuple[dset.Modification, ...]]:
     """Returns the dataset modifications since the given timestamp.
     
     See dataset.DatasetTracker.since() for details.
