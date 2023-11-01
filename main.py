@@ -26,6 +26,7 @@ from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
 import dataset as dset
+import schedule as schd
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ device_db = {}
 mi_connection: Optional[CommMonInj] = None
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
+
+schedule_tracker: Optional[schd.ScheduleTracker] = None
 
 class ScheduleInfo(pydantic.BaseModel):
     """Scheduled queue information.
@@ -71,9 +74,10 @@ def load_configs():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
+        "device_db_path": {device_db_path},
         "core_addr": {core_ip},
         "master_addr": {artiq_master_ip},
-        "device_db_path": {device_db_path},
+        "nofity_port": {nofity_port},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": {
             {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
@@ -86,7 +90,6 @@ def load_configs():
             ...
         },
         "dataset_tracker": {
-            "port": {port},
             "maxlen": {maxlen}
         }
       }
@@ -124,6 +127,18 @@ def init_schedule():
     latest_schedule.update(queue)
 
 
+async def init_schedule_tracker() -> asyncio.Task:
+    """Initializes the schedule tracker and runs the subscriber.
+    
+    This should be called after loading config.
+    """
+    global schedule_tracker  # pylint: disable=global-statement
+    schedule_tracker = schd.ScheduleTracker()
+    subscriber = Subscriber("schedule", schedule_tracker.target_builder)
+    await subscriber.connect(configs["master_addr"], configs["notify_port"])
+    return asyncio.create_task(run_subscriber(subscriber))
+
+
 async def init_dataset_tracker() -> asyncio.Task:
     """Initializes the dataset tracker and runs the subscriber.
     
@@ -134,7 +149,7 @@ async def init_dataset_tracker() -> asyncio.Task:
     dataset_tracker = dset.DatasetTracker(maxlen)
     notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
     subscriber = Subscriber("datasets", dataset_tracker.target_builder, notify_cb)
-    await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
+    await subscriber.connect(configs["master_addr"], configs["notify_port"])
     return asyncio.create_task(run_subscriber(subscriber))
 
 
