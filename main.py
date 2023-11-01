@@ -234,29 +234,10 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/experiment/queue/", response_model=ScheduleInfo)
-async def get_scheduled_queue(updated_time: Optional[float] = None) -> Any:
-    """Gets the scheduled queue and returns it.
-
-    Args:
-        updated_time: The last updated time by the client, in the format of time.time().
-
-    Returns:
-        The latest schedule info.
-        If the given updated time is earlier than when the latest schedule was updated,
-        it returns the latest schedule info immediately.
-        Otherwise, it polls until the schedule is updated and then returns it.
-    """
-    if updated_time is None or updated_time < latest_schedule.updated_time:
-        return latest_schedule
-    remote = get_client("master_schedule")
-    latest_queue = copy.deepcopy(latest_schedule.queue)
-    queue = remote.get_status()
-    while queue == latest_queue:
-        await asyncio.sleep(0)
-        queue = remote.get_status()
-    latest_schedule.update(queue)
-    return latest_schedule
+@app.get("/schedule/")
+async def get_schedule() -> dict[int, Any]:
+    """Returns the current schedule."""
+    return schedule_tracker.get()
 
 
 @app.post("/experiment/delete/")
