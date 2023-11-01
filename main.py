@@ -18,7 +18,7 @@ import h5py
 import numpy as np
 import pydantic
 from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -819,6 +819,11 @@ class {class_name}(EnvExperiment):
     remote = get_client("master_schedule")
     rid = remote.submit("main", expid, 0, None, False)
     return rid
+
+
+@app.post("/control/")
+async def control_hardware_during_experiment(request: Request):
+    """Controls an ARTIQ hardware while an experiment is running."""
 
 
 def get_client(target_name: str) -> rpc.Client:
