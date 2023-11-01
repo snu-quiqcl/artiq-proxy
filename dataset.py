@@ -8,6 +8,8 @@ import time
 from collections import deque
 from typing import Any, Optional, TypeVar, Generic
 
+from tracker import Tracker
+
 K, V = TypeVar("K"), TypeVar("V")
 
 logger = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ Modification = dict[str, Any]
 ModificationQueue = SortedQueue[float, Modification]
 
 
-class DatasetTracker:
+class DatasetTracker(Tracker[dict[str, Any]]):
     """Holds dataset modifications and provides searching API.
     
     Attributes:
@@ -79,8 +81,8 @@ class DatasetTracker:
         Args:
             maxlen: The maximum length of modification queues.
         """
+        super().__init__()
         self.modified: dict[str, asyncio.Event] = {}
-        self._target: Optional[dict[str, Any]] = None
         self._maxlen = maxlen
         self._modifications: dict[str, ModificationQueue] = {}
         self._last_deleted: dict[str, float] = {}
@@ -174,19 +176,6 @@ class DatasetTracker:
         if value is None:
             return -1, ()
         return time.time(), value[1]  # value = persist, data, metadata
-
-    def target_builder(self, struct: dict[str, Any]) -> dict[str, Any]:
-        """Initializes the target with the given struct.
-        
-        See sipyco.sync_struct.Subscriber for details.
-
-        This will make self._target the synchronized structure of the notifier.
-
-        Args:
-            struct: The initial structure for the target.
-        """
-        self._target = struct
-        return self._target
 
     def _notify_modified(self, dataset: str):
         """Sets and clears the modified event.
