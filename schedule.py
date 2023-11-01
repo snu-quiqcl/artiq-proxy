@@ -1,6 +1,7 @@
 """Module for realtime schedule management."""
 
 import asyncio
+import time
 from typing import Any, Optional
 
 from tracker import Tracker
@@ -17,9 +18,9 @@ class ScheduleTracker(Tracker[dict[int, Any]]):
         super().__init__()
         self.modifed = asyncio.Event()
 
-    def get(self) -> dict[int, Any]:
-        """Returns the current schedule."""
-        return self._target
+    def get(self) -> tuple[float, dict[int, Any]]:
+        """Returns the current timestamp and schedule."""
+        return time.time(), self._target
     
     def notify_modified(self):
         """Sets and clears the modified event.
