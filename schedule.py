@@ -28,3 +28,8 @@ class ScheduleTracker(Tracker[dict[int, Any]]):
         """
         self.modifed.set()
         self.modifed.clear()
+
+
+def notify_callback(tracker: ScheduleTracker, _mod: dict[str, Any]):
+    """Notifies modification to the tracker called as notify_cb() of sipyco system."""
+    tracker.notify_modified()
