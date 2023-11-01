@@ -1,6 +1,6 @@
 """Module for realtime schedule management."""
 
-from typing import Any, Optional
+from typing import Any
 
 from tracker import Tracker
 
