@@ -7,3 +7,7 @@ class ScheduleTracker:
 
     def __init__(self):
         self._target: Optional[dict[int, Any]] = None
+
+    def get(self) -> dict[int, Any]:
+        """Returns the current schedule."""
+        return self._target
