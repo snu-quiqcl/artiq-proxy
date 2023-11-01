@@ -235,8 +235,21 @@ async def get_experiment_info(file: str) -> Any:
 
 
 @app.get("/schedule/")
-async def get_schedule() -> dict[int, Any]:
-    """Returns the current schedule."""
+async def get_schedule(timestamp: float, timeout: Optional[float]) -> tuple[float, schd.Schedule]:
+    """Returns the current schedule.
+    
+    Args:
+        timestamp: The timestamp of the last update.
+        timeout: The timeout in seconds for awaiting new modifications.
+          None for no timeout (wait until done), and 0 or negative for non-blocking.
+    """
+    latest, schedule = schedule_tracker.get()
+    if timestamp < latest or (timeout is not None and timeout <= 0):
+        return latest, schedule
+    try:
+        await asyncio.wait_for(schedule_tracker.modifed.wait(), timeout)
+    except asyncio.TimeoutError:
+        return latest, schedule
     return schedule_tracker.get()
 
 
