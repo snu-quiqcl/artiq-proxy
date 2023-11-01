@@ -102,9 +102,9 @@ async def init_schedule_tracker() -> asyncio.Task:
     """
     global schedule_tracker  # pylint: disable=global-statement
     schedule_tracker = schd.ScheduleTracker()
-    subscriber = Subscriber("schedule", schedule_tracker.target_builder)
     notify_cb = functools.partial(schd.notify_callback, schedule_tracker)
-    await subscriber.connect(configs["master_addr"], configs["notify_port"], notify_cb)
+    subscriber = Subscriber("schedule", schedule_tracker.target_builder, notify_cb)
+    await subscriber.connect(configs["master_addr"], configs["notify_port"])
     return asyncio.create_task(run_subscriber(subscriber))
 
 
