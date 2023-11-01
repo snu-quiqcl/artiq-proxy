@@ -5,6 +5,7 @@
     "device_db_path": "device_db.py",
     "core_addr": "192.168.1.75",
     "master_addr": "localhost",
+    "notify_port": 3250,
     "ttl_devices": [
         "ttl4", "ttl5", "ttl6", "ttl7", "ttl8", "ttl9", "ttl10", "ttl11", "ttl12", "ttl13",
         "ttl14", "ttl15", "ttl16", "ttl17", "ttl18", "ttl19", "ttl20", "ttl21", "ttl22", "ttl23",
@@ -16,7 +17,5 @@
     "dds_devices": {
         "urukul0": [0, 1, 2, 3]
     },
-    "dataset_tracker": {
-        "port": 3250
-    }
+    "dataset_tracker": {}
 }
