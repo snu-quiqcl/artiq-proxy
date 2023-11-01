@@ -2,7 +2,6 @@
 
 import ast
 import asyncio
-import copy
 import functools
 import importlib.util
 import json
