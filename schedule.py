@@ -2,11 +2,10 @@
 
 from typing import Any, Optional
 
-class ScheduleTracker:
-    """Holds schedule in real time."""
+from tracker import Tracker
 
-    def __init__(self):
-        self._target: Optional[dict[int, Any]] = None
+class ScheduleTracker(Tracker[dict[int, Any]]):
+    """Holds schedule in real time."""
 
     def get(self) -> dict[int, Any]:
         """Returns the current schedule."""
