@@ -40,31 +40,6 @@ dataset_tracker: Optional[dset.DatasetTracker] = None
 
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
-class ScheduleInfo(pydantic.BaseModel):
-    """Scheduled queue information.
-    
-    Fields:
-        updated_time: The time when the current schedule was updated, in the format of time.time().
-        queue: A dictionary with queued experiments.
-          Each key is a RID, and its value is the dictionary with the experiment information:
-          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
-    """
-    updated_time: Optional[float] = None
-    queue: Optional[dict[int, dict[str, Any]]] = None
-
-    def update(self, queue: dict[int, dict[str, Any]]):
-        """Updates the schedule info.
-        
-        Args:
-            queue: A new scheduled queue.
-        """
-        self.updated_time = time.time()
-        self.queue = queue
-
-
-latest_schedule = ScheduleInfo()
-
-
 def load_configs():
     """Loads config information from the configuration file.
 
@@ -120,13 +95,6 @@ async def run_subscriber(subscriber: Subscriber):
         await subscriber.close()
 
 
-def init_schedule():
-    """Initializes the schedule info to the latest."""
-    remote = get_client("master_schedule")
-    queue = remote.get_status()
-    latest_schedule.update(queue)
-
-
 async def init_schedule_tracker() -> asyncio.Task:
     """Initializes the schedule tracker and runs the subscriber.
     
@@ -171,7 +139,6 @@ async def lifespan(_app: FastAPI):
     """
     load_configs()
     load_device_db()
-    init_schedule()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
     await connect_moninj()
