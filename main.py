@@ -824,6 +824,15 @@ class {class_name}(EnvExperiment):
 @app.post("/control/")
 async def control_hardware_during_experiment(request: Request):
     """Controls an ARTIQ hardware while an experiment is running."""
+    params = request.query_params
+    command = {}
+    hardware = params.get("hardware", None)
+    if hardware == "DAC":
+        pass
+    elif hardware == "DDS":
+        pass
+    else:
+        logger.error("The hardware %s is not supported in control during an experiment.", hardware)
 
 
 def get_client(target_name: str) -> rpc.Client:
