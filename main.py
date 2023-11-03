@@ -821,8 +821,12 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+def send_command_to_experiment(command: dict[str, Any]) -> bool:
+    """Sends the given command to the running experiment."""
+
+
 @app.post("/control/")
-async def control_hardware_during_experiment(request: Request):
+async def control_hardware_during_experiment(request: Request) -> bool:
     """Controls an ARTIQ hardware while an experiment is running."""
     params = request.query_params
     command = {}
@@ -833,14 +837,13 @@ async def control_hardware_during_experiment(request: Request):
         if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
             logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
             return
-        voltage = params.get("voltage", None)
-        if voltage is None:
+        if "voltage" not in params:
             logger.error("The voltage should be set.")
             return
         command.update({
             "device": device,
             "func": "set_dac",
-            "args": [[voltage], [channel]]
+            "args": [[params["voltage"]], [channel]]
         })
     elif hardware == "DDS":
         if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
@@ -868,6 +871,7 @@ async def control_hardware_during_experiment(request: Request):
             return
     else:
         logger.error("The hardware %s is not supported in control during an experiment.", hardware)
+    return send_command_to_experiment(command)
 
 
 def get_client(target_name: str) -> rpc.Client:
