@@ -843,7 +843,28 @@ async def control_hardware_during_experiment(request: Request):
             "args": [[voltage], [channel]]
         })
     elif hardware == "DDS":
-        pass
+        if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
+            logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
+            return
+        command.update({
+            "device": f"{device}_ch{channel}"
+        })
+        if "profile" in params:
+            command.update({
+                "func": "set",
+                "kwargs": params["profile"]
+            })
+        elif "attenuation" in params:
+            command.update({
+                "func": "set_att",
+                "args": [params["attenuation"]]
+            })
+        elif "switch" in params:
+            command.update({
+                "func": "sw.on" if params["switch"] else "sw.off"
+            })
+        else:
+            logger.error("One of profile, attenuation, and switch should be set.")
     else:
         logger.error("The hardware %s is not supported in control during an experiment.", hardware)
 
