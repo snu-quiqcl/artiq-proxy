@@ -833,6 +833,15 @@ async def control_hardware_during_experiment(request: Request):
         if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
             logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
             return
+        voltage = params.get("voltage", None)
+        if voltage is None:
+            logger.error("The voltage should be set.")
+            return
+        command.update({
+            "device": device,
+            "func": "set_dac",
+            "args": [[voltage], [channel]]
+        })
     elif hardware == "DDS":
         pass
     else:
