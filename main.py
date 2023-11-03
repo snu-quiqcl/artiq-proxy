@@ -826,9 +826,13 @@ async def control_hardware_during_experiment(request: Request):
     """Controls an ARTIQ hardware while an experiment is running."""
     params = request.query_params
     command = {}
-    hardware = params.get("hardware", None)
+    hardware = params.get("hardware", "")
+    device = params.get("device", "")
+    channel = params.get("channel", -1)
     if hardware == "DAC":
-        pass
+        if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
+            logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
+            return
     elif hardware == "DDS":
         pass
     else:
