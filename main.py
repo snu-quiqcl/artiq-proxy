@@ -865,6 +865,7 @@ async def control_hardware_during_experiment(request: Request):
             })
         else:
             logger.error("One of profile, attenuation, and switch should be set.")
+            return
     else:
         logger.error("The hardware %s is not supported in control during an experiment.", hardware)
 
