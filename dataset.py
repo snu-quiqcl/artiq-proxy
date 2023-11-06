@@ -189,24 +189,18 @@ class DatasetTracker(Tracker[dict[str, Any]]):
         modified.set()
         modified.clear()
 
-
-def notify_callback(tracker: DatasetTracker, mod: dict[str, Any]):
-    """Adds modification to the tracker called as notify_cb() of sipyco system.
-    
-    Args:
-        tracker: Target dataset tracket object.
-        mod: The argument of notify_cb() called by sipyco.sync_struct.Subscriber.
-    """
-    action = mod["action"]
-    if action == "init":
-        return
-    if not mod["path"]:
-        if action == "setitem":
-            tracker.add_dataset(mod["key"])
-        elif action == "delitem":
-            tracker.remove_dataset(mod["key"])
-        else:
-            logger.error("Unexpected mod: %s.", mod)
-        return
-    dataset, *_ = mod.pop("path")
-    tracker.add(dataset, time.time(), mod)
+    def notify_callback(self, mod: dict[str, Any]):
+        """Overridden."""
+        action = mod["action"]
+        if action == "init":
+            return
+        if not mod["path"]:
+            if action == "setitem":
+                self.add_dataset(mod["key"])
+            elif action == "delitem":
+                self.remove_dataset(mod["key"])
+            else:
+                logger.error("Unexpected mod: %s.", mod)
+            return
+        dataset, *_ = mod.pop("path")
+        self.add(dataset, time.time(), mod)
