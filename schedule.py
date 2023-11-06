@@ -36,7 +36,6 @@ class ScheduleTracker(Tracker[Schedule]):
         self.modifed.set()
         self.modifed.clear()
 
-
-def notify_callback(tracker: ScheduleTracker, _mod: dict[str, Any]):
-    """Notifies modification to the tracker called as notify_cb() of sipyco system."""
-    tracker.notify_modified()
+    def notify_callback(self, mod: dict[str, Any]):  # pylint: disable=unused-argument
+        """Overridden."""
+        self.notify_modified()
