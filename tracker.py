@@ -1,6 +1,6 @@
 """Module for base tracker."""
 
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 T = TypeVar("T")
 
@@ -22,3 +22,6 @@ class Tracker(Generic[T]):
         """
         self._target = struct
         return self._target
+
+    def notify_callback(self, mod: dict[str, Any]):
+        """Notifies modification to the tracker called as notify_cb() of sipyco system."""
