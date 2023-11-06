@@ -830,6 +830,12 @@ def send_command_to_experiment(command: dict[str, Any]) -> bool:
     except OSError:
         logger.exception("Failed to create a socket.")
         return False
+    try:
+        s.connect((configs["master_addr"], configs["experiment_port"]))
+    except OSError:
+        s.close()
+        logger.exception("Failed to connect to the running experiment.")
+        return False
 
 
 @app.post("/control/")
