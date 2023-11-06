@@ -30,13 +30,11 @@ import schedule as schd
 logger = logging.getLogger(__name__)
 
 configs = {}
-
 device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
-
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
 def load_configs():
