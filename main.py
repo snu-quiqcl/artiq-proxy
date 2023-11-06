@@ -51,6 +51,7 @@ def load_configs():
         "core_addr": {core_ip},
         "master_addr": {artiq_master_ip},
         "nofity_port": {nofity_port},
+        "experiment_port": {experiment_port},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": {
             {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
