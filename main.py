@@ -847,6 +847,12 @@ def send_command_to_experiment(command: dict[str, Any]) -> bool:
         s.close()
         logger.exception("Failed to send the command.")
         return False
+    try:
+        response = s.recv(1024)
+    except OSError:
+        s.close()
+        logger.exception("Failed to receive a response.")
+        return False
 
 
 @app.post("/control/")
