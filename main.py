@@ -826,6 +826,11 @@ class {class_name}(EnvExperiment):
 def send_command_to_experiment(command: dict[str, Any]) -> bool:
     """Sends the given command to the running experiment."""
     try:
+        command_str = json.dumps(command)
+    except TypeError:
+        logger.exception("Failed to serialize the command.")
+        return False
+    try:
         s = socket.socket()
     except OSError:
         logger.exception("Failed to create a socket.")
@@ -835,6 +840,12 @@ def send_command_to_experiment(command: dict[str, Any]) -> bool:
     except OSError:
         s.close()
         logger.exception("Failed to connect to the running experiment.")
+        return False
+    try:
+        s.send(command_str.encode())
+    except OSError:
+        s.close()
+        logger.exception("Failed to send the command.")
         return False
 
 
