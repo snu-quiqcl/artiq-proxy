@@ -23,5 +23,9 @@ class Tracker(Generic[T]):
         self._target = struct
         return self._target
 
-    def notify_callback(self, mod: dict[str, Any]):
-        """Notifies modification to the tracker called as notify_cb() of sipyco system."""
+    def notify_callback(self, mod: dict[str, Any]):  # pylint: disable=unused-argument
+        """Notifies modification to the tracker called as notify_cb() of sipyco system.
+        
+        Args:
+            mod: The argument of notify_cb() called by sipyco.sync_struct.Subscriber.
+        """
