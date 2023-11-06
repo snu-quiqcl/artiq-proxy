@@ -8,6 +8,7 @@ import logging
 import os
 import posixpath
 import shutil
+import socket
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -823,6 +824,11 @@ class {class_name}(EnvExperiment):
 
 def send_command_to_experiment(command: dict[str, Any]) -> bool:
     """Sends the given command to the running experiment."""
+    try:
+        s = socket.socket()
+    except OSError:
+        logger.exception("Failed to create a socket.")
+        return False
 
 
 @app.post("/control/")
