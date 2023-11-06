@@ -24,7 +24,7 @@ class ScheduleTracker(Tracker[Schedule]):
         self.latest = -1
 
     def get(self) -> tuple[float, Schedule]:
-        """Returns the current timestamp and schedule."""
+        """Returns the latest timestamp and the current schedule."""
         return self.latest, self._target
     
     def notify_modified(self):
