@@ -2,7 +2,6 @@
 
 import ast
 import asyncio
-import functools
 import importlib.util
 import json
 import logging
@@ -24,6 +23,7 @@ from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
+import tracker as trck
 import dataset as dset
 import schedule as schd
 
@@ -80,6 +80,15 @@ def load_device_db():
     device_db.update(module.device_db)
 
 
+def create_subscriber(notifier_name: str, tracker: trck.Tracker):
+    """Creates a subscriber object and returns it.
+    
+    Args:
+        See sipyco.sync_struct.Subscriber.__init__().
+    """
+    return Subscriber(notifier_name, tracker.target_builder, tracker.notify_callback)
+
+
 async def run_subscriber(subscriber: Subscriber):
     """Runs the subscriber's receiving task and closes it finally.
     
@@ -99,8 +108,9 @@ async def init_schedule_tracker() -> asyncio.Task:
     """
     global schedule_tracker  # pylint: disable=global-statement
     schedule_tracker = schd.ScheduleTracker()
-    notify_cb = functools.partial(schd.notify_callback, schedule_tracker)
-    subscriber = Subscriber("schedule", schedule_tracker.target_builder, notify_cb)
+    subscriber = Subscriber(
+        "schedule", schedule_tracker.target_builder, schedule_tracker.notify_callback
+    )
     await subscriber.connect(configs["master_addr"], configs["notify_port"])
     return asyncio.create_task(run_subscriber(subscriber))
 
@@ -113,8 +123,9 @@ async def init_dataset_tracker() -> asyncio.Task:
     global dataset_tracker  # pylint: disable=global-statement
     maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
-    notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
-    subscriber = Subscriber("datasets", dataset_tracker.target_builder, notify_cb)
+    subscriber = Subscriber(
+        "datasets", dataset_tracker.target_builder, dataset_tracker.notify_callback
+    )
     await subscriber.connect(configs["master_addr"], configs["notify_port"])
     return asyncio.create_task(run_subscriber(subscriber))
 
