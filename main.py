@@ -848,11 +848,21 @@ def send_command_to_experiment(command: dict[str, Any]) -> bool:
         logger.exception("Failed to send the command.")
         return False
     try:
-        response = s.recv(1024)
+        response_str = s.recv(1024).decode()
     except OSError:
         s.close()
         logger.exception("Failed to receive a response.")
         return False
+    s.close()
+    try:
+        response = json.loads(response_str)
+    except TypeError:
+        logger.exception("Failed to deserialize the response.")
+        return False
+    if not isinstance(response, bool):
+        logger.exception("The type of response should be boolean.")
+        return False
+    return response
 
 
 @app.post("/control/")
