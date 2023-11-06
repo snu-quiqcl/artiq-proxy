@@ -872,7 +872,7 @@ async def control_hardware_during_experiment(request: Request) -> bool:
     command = {}
     hardware = params.get("hardware", "")
     device = params.get("device", "")
-    channel = params.get("channel", -1)
+    channel = int(params.get("channel", -1))
     if hardware == "DAC":
         if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
             logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
@@ -883,7 +883,7 @@ async def control_hardware_during_experiment(request: Request) -> bool:
         command.update({
             "device": device,
             "func": "set_dac",
-            "args": [[params["voltage"]], [channel]]
+            "args": [[float(params["voltage"])], [channel]]
         })
     elif hardware == "DDS":
         if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
@@ -895,16 +895,16 @@ async def control_hardware_during_experiment(request: Request) -> bool:
         if "profile" in params:
             command.update({
                 "func": "set",
-                "kwargs": params["profile"]
+                "kwargs": eval(params["profile"])
             })
         elif "attenuation" in params:
             command.update({
                 "func": "set_att",
-                "args": [params["attenuation"]]
+                "args": [float(params["attenuation"])]
             })
         elif "switch" in params:
             command.update({
-                "func": "sw.on" if params["switch"] else "sw.off"
+                "func": "sw.on" if bool(params["switch"]) else "sw.off"
             })
         else:
             logger.error("One of profile, attenuation, and switch should be set.")
