@@ -207,6 +207,9 @@ async def get_schedule(timestamp: float, timeout: Optional[float]) -> tuple[floa
         timestamp: The timestamp of the last update.
         timeout: The timeout in seconds for awaiting new modifications.
           None for no timeout (wait until done), and 0 or negative for non-blocking.
+
+    Returns:
+        See ScheduleTracker.get().
     """
     latest, schedule = schedule_tracker.get()
     if timestamp < latest or (timeout is not None and timeout <= 0):
