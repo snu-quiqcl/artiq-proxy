@@ -2,8 +2,6 @@
 
 import ast
 import asyncio
-import copy
-import functools
 import importlib.util
 import json
 import logging
@@ -25,42 +23,19 @@ from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
+import tracker as trck
 import dataset as dset
+import schedule as schd
 
 logger = logging.getLogger(__name__)
 
 configs = {}
-
 device_db = {}
 
 mi_connection: Optional[CommMonInj] = None
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
-
-class ScheduleInfo(pydantic.BaseModel):
-    """Scheduled queue information.
-    
-    Fields:
-        updated_time: The time when the current schedule was updated, in the format of time.time().
-        queue: A dictionary with queued experiments.
-          Each key is a RID, and its value is the dictionary with the experiment information:
-          "due_date", "expid", "flush", "pipeline", "priority", "repo_msg", and "status".
-    """
-    updated_time: Optional[float] = None
-    queue: Optional[dict[int, dict[str, Any]]] = None
-
-    def update(self, queue: dict[int, dict[str, Any]]):
-        """Updates the schedule info.
-        
-        Args:
-            queue: A new scheduled queue.
-        """
-        self.updated_time = time.time()
-        self.queue = queue
-
-
-latest_schedule = ScheduleInfo()
-
+schedule_tracker: Optional[schd.ScheduleTracker] = None
 
 def load_configs():
     """Loads config information from the configuration file.
@@ -71,9 +46,10 @@ def load_configs():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
+        "device_db_path": {device_db_path},
         "core_addr": {core_ip},
         "master_addr": {artiq_master_ip},
-        "device_db_path": {device_db_path},
+        "nofity_port": {nofity_port},
         "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
         "dac_devices": {
             {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
@@ -86,7 +62,6 @@ def load_configs():
             ...
         },
         "dataset_tracker": {
-            "port": {port},
             "maxlen": {maxlen}
         }
       }
@@ -117,11 +92,26 @@ async def run_subscriber(subscriber: Subscriber):
         await subscriber.close()
 
 
-def init_schedule():
-    """Initializes the schedule info to the latest."""
-    remote = get_client("master_schedule")
-    queue = remote.get_status()
-    latest_schedule.update(queue)
+async def create_subscriber_task(notifier_name: str, tracker: trck.Tracker) -> asyncio.Task:
+    """Creates a subscriber task and returns it.
+    
+    Args:
+        notifier_name, tracker.target_builder, and tracker.notify_callback are passed to
+        sipyco.sync_struct.Subscriber.__init__().
+    """
+    subscriber = Subscriber(notifier_name, tracker.target_builder, tracker.notify_callback)
+    await subscriber.connect(configs["master_addr"], configs["notify_port"])
+    return asyncio.create_task(run_subscriber(subscriber))
+
+
+async def init_schedule_tracker() -> asyncio.Task:
+    """Initializes the schedule tracker and runs the subscriber.
+    
+    This should be called after loading config.
+    """
+    global schedule_tracker  # pylint: disable=global-statement
+    schedule_tracker = schd.ScheduleTracker()
+    return await create_subscriber_task("schedule", schedule_tracker)
 
 
 async def init_dataset_tracker() -> asyncio.Task:
@@ -132,10 +122,7 @@ async def init_dataset_tracker() -> asyncio.Task:
     global dataset_tracker  # pylint: disable=global-statement
     maxlen = configs["dataset_tracker"].get("maxlen", 1 << 16)
     dataset_tracker = dset.DatasetTracker(maxlen)
-    notify_cb = functools.partial(dset.notify_callback, dataset_tracker)
-    subscriber = Subscriber("datasets", dataset_tracker.target_builder, notify_cb)
-    await subscriber.connect(configs["master_addr"], configs["dataset_tracker"]["port"])
-    return asyncio.create_task(run_subscriber(subscriber))
+    return await create_subscriber_task("datasets", dataset_tracker)
 
 
 async def connect_moninj():
@@ -155,8 +142,8 @@ async def lifespan(_app: FastAPI):
     """
     load_configs()
     load_device_db()
-    init_schedule()
-    _task = await init_dataset_tracker()
+    _schedule_task = await init_schedule_tracker()
+    _dataset_task = await init_dataset_tracker()
     await connect_moninj()
     yield
     await mi_connection.close()
@@ -218,29 +205,26 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/experiment/queue/", response_model=ScheduleInfo)
-async def get_scheduled_queue(updated_time: Optional[float] = None) -> Any:
-    """Gets the scheduled queue and returns it.
-
+@app.get("/schedule/")
+async def get_schedule(timestamp: float, timeout: Optional[float]) -> tuple[float, schd.Schedule]:
+    """Returns the current schedule.
+    
     Args:
-        updated_time: The last updated time by the client, in the format of time.time().
+        timestamp: The timestamp of the last update.
+        timeout: The timeout in seconds for awaiting new modifications.
+          None for no timeout (wait until done), and 0 or negative for non-blocking.
 
     Returns:
-        The latest schedule info.
-        If the given updated time is earlier than when the latest schedule was updated,
-        it returns the latest schedule info immediately.
-        Otherwise, it polls until the schedule is updated and then returns it.
+        See ScheduleTracker.get().
     """
-    if updated_time is None or updated_time < latest_schedule.updated_time:
-        return latest_schedule
-    remote = get_client("master_schedule")
-    latest_queue = copy.deepcopy(latest_schedule.queue)
-    queue = remote.get_status()
-    while queue == latest_queue:
-        await asyncio.sleep(0)
-        queue = remote.get_status()
-    latest_schedule.update(queue)
-    return latest_schedule
+    latest, schedule = schedule_tracker.get()
+    if timestamp < latest or (timeout is not None and timeout <= 0):
+        return latest, schedule
+    try:
+        await asyncio.wait_for(schedule_tracker.modifed.wait(), timeout)
+    except asyncio.TimeoutError:
+        return latest, schedule
+    return schedule_tracker.get()
 
 
 @app.post("/experiment/delete/")
