@@ -882,8 +882,8 @@ async def control_hardware_during_experiment(request: Request) -> bool:
             return
         command.update({
             "device": device,
-            "func": "set_dac",
-            "args": [[float(params["voltage"])], [channel]]
+            "func": "voltage",
+            "args": {"channel": channel, "voltage": params["voltage"]}
         })
     elif hardware == "DDS":
         if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
