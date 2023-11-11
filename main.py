@@ -880,10 +880,11 @@ async def control_hardware_during_experiment(request: Request) -> bool:
         if "voltage" not in params:
             logger.error("The voltage should be set.")
             return
+        voltage = float(params["voltage"])
         command.update({
             "device": device,
             "func": "voltage",
-            "args": {"channel": channel, "voltage": params["voltage"]}
+            "args": {"channel": channel, "voltage": voltage}
         })
     elif hardware == "DDS":
         if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
