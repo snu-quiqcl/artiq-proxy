@@ -868,23 +868,22 @@ def send_command_to_experiment(command: dict[str, Any]) -> bool:
 @app.post("/control/")
 async def control_hardware_during_experiment(request: Request) -> bool:
     """Controls an ARTIQ hardware while an experiment is running."""
-    params = request.query_params
+    body = await request.json()
     command = {}
-    hardware = params.get("hardware", "")
-    device = params.get("device", "")
-    channel = int(params.get("channel", -1))
+    hardware = body.get("hardware", "")
+    device = body.get("device", "")
+    channel = body.get("channel", -1)
     if hardware == "DAC":
         if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
             logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
             return
-        if "voltage" not in params:
+        if "voltage" not in body:
             logger.error("The voltage should be set.")
             return
-        voltage = float(params["voltage"])
         command.update({
             "device": device,
             "func": "voltage",
-            "args": {"channel": channel, "voltage": voltage}
+            "args": {"channel": channel, "value": body["voltage"]}
         })
     elif hardware == "DDS":
         if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
@@ -893,19 +892,20 @@ async def control_hardware_during_experiment(request: Request) -> bool:
         command.update({
             "device": f"{device}_ch{channel}"
         })
-        if "profile" in params:
+        if "profile" in body:
             command.update({
-                "func": "set",
-                "kwargs": eval(params["profile"])
+                "func": "profile",
+                "kwargs": body["profile"]  # frequency, amplitude, phase, and switching
             })
-        elif "attenuation" in params:
+        elif "attenuation" in body:
             command.update({
-                "func": "set_att",
-                "args": [float(params["attenuation"])]
+                "func": "attenuation",
+                "args": {"value": body["attenuation"]}
             })
-        elif "switch" in params:
+        elif "switch" in body:
             command.update({
-                "func": "sw.on" if bool(params["switch"]) else "sw.off"
+                "func": "switch",
+                "args": {"on": body["switch"]}
             })
         else:
             logger.error("One of profile, attenuation, and switch should be set.")
