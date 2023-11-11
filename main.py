@@ -823,6 +823,7 @@ class {class_name}(EnvExperiment):
     return rid
 
 
+# pylint: disable=too-many-return-statements
 def send_command_to_experiment(command: dict[str, Any]) -> bool:
     """Sends the given command to the running experiment."""
     try:
