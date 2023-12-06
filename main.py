@@ -9,7 +9,6 @@ import os
 import posixpath
 import shutil
 import time
-from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Union
@@ -134,22 +133,29 @@ async def connect_moninj():
     await mi_connection.connect(configs["core_addr"])
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    """Lifespan events.
+app = FastAPI()
 
-    This function is set as the lifespan of the application.
+
+@app.on_event("startup")
+async def startup_event():
+    """Startup events.
+
+    This is called before the server starts.
     """
     load_configs()
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
     await connect_moninj()
-    yield
+
+
+@app.on_event("shutdown")
+async def shutdonw_event():
+    """Shutdown events.
+    
+    This is called after the server is shutting down.
+    """
     await mi_connection.close()
-
-
-app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/ls/")
