@@ -23,6 +23,7 @@ jobs:
       run: |
         pip install h5py
         pip install fastapi
+        pip install websockets
         pip install httpx
         pip install numpy
         pip install git+https://github.com/m-labs/sipyco.git
