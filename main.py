@@ -17,8 +17,9 @@ from typing import Any, Optional, Union
 import h5py
 import numpy as np
 import pydantic
+import websockets
 from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -205,17 +206,12 @@ async def get_experiment_info(file: str) -> Any:
     return remote.examine(file)
 
 
-@app.get("/schedule/")
-async def get_schedule(timestamp: float, timeout: Optional[float]) -> tuple[float, schd.Schedule]:
-    """Returns the current schedule.
-    
-    Args:
-        timestamp: The timestamp of the last update.
-        timeout: The timeout in seconds for awaiting new modifications.
-          None for no timeout (wait until done), and 0 or negative for non-blocking.
+@app.websocket("/schedule/")
+async def get_schedule(websocket: WebSocket):
+    """Sends the schedule whenever it is modified.
 
-    Returns:
-        See ScheduleTracker.get().
+    Args:
+        websocket: The web socket object.
     """
     latest, schedule = schedule_tracker.get()
     if timestamp < latest or (timeout is not None and timeout <= 0):
