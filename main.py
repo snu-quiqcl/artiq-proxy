@@ -213,14 +213,18 @@ async def get_schedule(websocket: WebSocket):
     Args:
         websocket: The web socket object.
     """
-    latest, schedule = schedule_tracker.get()
-    if timestamp < latest or (timeout is not None and timeout <= 0):
-        return latest, schedule
+    await websocket.accept()
     try:
-        await asyncio.wait_for(schedule_tracker.modifed.wait(), timeout)
-    except asyncio.TimeoutError:
-        return latest, schedule
-    return schedule_tracker.get()
+        schedule = schedule_tracker.get()
+        await websocket.send_json(schedule)  # send the current schedule on the first connection.
+        while True:
+            await asyncio.wait_for(schedule_tracker.modifed.wait())
+            schedule = schedule_tracker.get()
+            await websocket.send_json(schedule)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the schedule is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the schedule.")
 
 
 @app.post("/experiment/delete/")
