@@ -218,7 +218,7 @@ async def get_schedule(websocket: WebSocket):
         schedule = schedule_tracker.get()
         await websocket.send_json(schedule)  # send the current schedule on the first connection.
         while True:
-            await asyncio.wait_for(schedule_tracker.modifed.wait())
+            await asyncio.wait_for(schedule_tracker.modifed.wait(), None)
             schedule = schedule_tracker.get()
             await websocket.send_json(schedule)
     except websockets.exceptions.ConnectionClosedError:
