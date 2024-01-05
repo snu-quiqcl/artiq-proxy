@@ -549,10 +549,26 @@ async def get_master_dataset(key: str) -> Union[int, float, list]:
     return data
 
 
-@app.get("/dataset/master/list/")
-async def list_dataset() -> tuple[str, ...]:
-    """Returns the list of datasets available in artiq master."""
-    return dataset_tracker.datasets()
+@app.websocket("/dataset/master/list/")
+async def list_dataset(websocket: WebSocket):
+    """Sends the list of datasets available in artiq master whenever it is modified.
+    
+    Args:
+        websocket: The web socket object.
+    """
+    await websocket.accept()
+    try:
+        datasets = dataset_tracker.datasets()
+        # send the current dataset list on the first connection.
+        await websocket.send_json(datasets)
+        while True:
+            await asyncio.wait_for(dataset_tracker.list_modifed.wait(), None)
+            datasets = dataset_tracker.datasets()
+            await websocket.send_json(datasets)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the dataset list is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the dataset list.")
 
 
 @app.get("/dataset/master/modification/")
