@@ -102,13 +102,15 @@ class DatasetTracker(Tracker[Dataset]):
               overwritten by the new one. Since the old one is deleted, the time
               is saved in _last_deleted.
         """
-        if dataset in self._modifications:
+        overwritten = dataset in self._modifications
+        if overwritten:
             self._last_deleted[dataset] = time.time()
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
             self._notify_modified(dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
         self.modified[dataset] = asyncio.Event()
-        self._notify_list_modified()
+        if not overwritten:
+            self._notify_list_modified()
 
     def remove_dataset(self, dataset: str):
         """Removes a dataset entry.
