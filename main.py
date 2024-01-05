@@ -562,7 +562,7 @@ async def list_dataset(websocket: WebSocket):
         # send the current dataset list on the first connection.
         await websocket.send_json(datasets)
         while True:
-            await asyncio.wait_for(dataset_tracker.list_modifed.wait(), None)
+            await asyncio.wait_for(dataset_tracker.list_modified.wait(), None)
             datasets = dataset_tracker.datasets()
             await websocket.send_json(datasets)
     except websockets.exceptions.ConnectionClosedError:
