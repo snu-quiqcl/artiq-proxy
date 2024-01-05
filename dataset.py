@@ -64,11 +64,12 @@ class SortedQueue(Generic[K, V]):
         return latest_key, values
 
 
+Dataset = dict[str, Any]
 Modification = dict[str, Any]
 ModificationQueue = SortedQueue[float, Modification]
 
 
-class DatasetTracker(Tracker[dict[str, Any]]):
+class DatasetTracker(Tracker[Dataset]):
     """Holds dataset modifications and provides searching API.
     
     Attributes:
