@@ -531,19 +531,19 @@ async def list_result_directory() -> list[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
-    """Returns the current timestamp and the dataset broadcast to artiq master.
+async def get_master_dataset(key: str) -> Union[int, float, list]:
+    """Returns the dataset broadcast to artiq master.
 
     Args:
         key: The key of the target dataset.
 
     Returns:
-        If the dataset is not initialized or does not exist, it returns (-1, ()).
+        If the dataset is not initialized or does not exist, it returns an empty tuple.
     """
-    timestamp, array = dataset_tracker.get(key)
-    if isinstance(array, np.ndarray):
-        array = array.tolist()
-    return timestamp, array
+    _, data = dataset_tracker.get(key)
+    if isinstance(data, np.ndarray):
+        data = data.tolist()
+    return data
 
 
 @app.get("/dataset/master/list/")
