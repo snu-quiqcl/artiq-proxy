@@ -13,7 +13,7 @@ class ScheduleTracker(Tracker[Schedule]):
     """Holds schedule in real time.
     
     Attributes:
-        modified: The event set when any new modification to the schedule is added.
+        modified: The event set when the schedule is modified.
         latest: The timestamp of the last modification.
     """
 
