@@ -585,14 +585,13 @@ async def get_dataset_modification(websocket: WebSocket):
     Args:
         websocket: The web socket object.
     """
-    latest, modifications = dataset_tracker.since(key, timestamp)
-    if modifications or latest < 0 or (timeout is not None and timeout <= 0):
-        return latest, modifications
+    await websocket.accept()
     try:
-        await asyncio.wait_for(dataset_tracker.modified[key].wait(), timeout)
-    except asyncio.TimeoutError:
-        return latest, modifications
-    return dataset_tracker.since(key, timestamp)
+        key = await websocket.receive_json()
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the dataset modification is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the dataset modification.")
 
 
 class ResultFileType(str, Enum):
