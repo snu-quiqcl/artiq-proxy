@@ -210,6 +210,9 @@ async def get_experiment_info(file: str) -> Any:
 async def get_schedule(websocket: WebSocket):
     """Sends the schedule whenever it is modified.
 
+    After accepted, it sends the current schedule immediately.
+    Then, it sends the schedule every time it is modified.
+
     Args:
         websocket: The web socket object.
     """
