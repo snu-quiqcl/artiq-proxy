@@ -586,9 +586,13 @@ async def get_dataset_modification(websocket: WebSocket):
     """
     await websocket.accept()
     try:
-        key = await websocket.receive_json()
-        _, data = dataset_tracker.get(key)
+        name = await websocket.receive_json()
+        timestamp, data = dataset_tracker.get(name)
         await websocket.send_json(data)
+        _, parameters = dataset_tracker.get(f"{name}.parameters")
+        await websocket.send_json(parameters)
+        _, units = dataset_tracker.get(f"{name}.units")
+        await websocket.send_json(units)
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the dataset modification is closed.")
     except websockets.exceptions.WebSocketException:
