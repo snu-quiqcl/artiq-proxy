@@ -574,22 +574,18 @@ async def list_dataset(websocket: WebSocket):
         logger.exception("Failed to send the dataset list.")
 
 
-@app.get("/dataset/master/modification/")
-async def get_dataset_modification(
-    key: str, timestamp: float, timeout: Optional[float],
-) -> tuple[float, tuple[dset.Modification, ...]]:
-    """Returns the dataset modifications since the given timestamp.
-    
-    See dataset.DatasetTracker.since() for details.
+@app.websocket("/dataset/master/modification/")
+async def get_dataset_modification(websocket: WebSocket):
+    """Sends the specific dataset modification whenever it is modified.
+
+    After accepted, it receives the target dataset name.
+    Then, it sends the current dataset, parameters, and units immediately.
+    Finally, it sends the dataset modificiation every time it is modified.
+
+    For details about dataset modificiation, see dataset.DatasetTracker.since().
 
     Args:
-        key: The key of the target dataset.
-        timestamp: The timestamp of the last update.
-        timeout: The timeout in seconds for awaiting new modifications.
-          None for no timeout (wait until done), and 0 or negative for non-blocking.
-          The actual execution time might exceed the timeout because of the
-          since() calls are not timed. Although the timeout becomes less precise,
-          it can guarantee a valid return value for even short timeouts.
+        websocket: The web socket object.
     """
     latest, modifications = dataset_tracker.since(key, timestamp)
     if modifications or latest < 0 or (timeout is not None and timeout <= 0):
