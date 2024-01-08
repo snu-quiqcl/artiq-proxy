@@ -219,7 +219,7 @@ async def get_schedule(websocket: WebSocket):
     await websocket.accept()
     try:
         schedule = schedule_tracker.get()
-        await websocket.send_json(schedule)  # send the current schedule on the first connection.
+        await websocket.send_json(schedule)
         while True:
             await asyncio.wait_for(schedule_tracker.modifed.wait(), None)
             schedule = schedule_tracker.get()
