@@ -551,6 +551,9 @@ async def get_master_dataset(key: str) -> Union[int, float, list]:
 async def list_dataset(websocket: WebSocket):
     """Sends the list of datasets available in artiq master whenever it is modified.
     
+    After accepted, it sends the current dataset list immediately.
+    Then, it sends the dataset list every time it is modified.
+
     Args:
         websocket: The web socket object.
     """
