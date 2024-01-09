@@ -577,7 +577,7 @@ async def get_dataset_modification(websocket: WebSocket):
 
     After accepted, it receives the target dataset name.
     Then, it sends the current dataset, parameters, and units immediately.
-    Finally, it sends the dataset modificiation every time it is modified.
+    Finally, it sends the dataset modificiation at least a second apart, every time it is modified.
 
     For details about dataset modificiation, see dataset.DatasetTracker.since().
 
@@ -593,6 +593,15 @@ async def get_dataset_modification(websocket: WebSocket):
         await websocket.send_json(parameters)
         _, units = dataset_tracker.get(f"{name}.units")
         await websocket.send_json(units)
+        while True:
+            await asyncio.wait_for(dataset_tracker.modified[name].wait(), None)
+            latest, modifications = dataset_tracker.since(name, timestamp)
+            if latest < 0:  # dataset is overwritten or removed
+                await websocket.send_json(None)
+                break
+            if latest > timestamp + 1:  # changes within 1 second are buffered
+                timestamp = latest
+                await websocket.send_json(modifications)
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the dataset modification is closed.")
     except websockets.exceptions.WebSocketException:
