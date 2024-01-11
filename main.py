@@ -327,17 +327,18 @@ def write_vcd(self):
 @app.get("/experiment/submit/")
 async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-locals
     file: str,
+    cls: Optional[str] = None,
     args: str = "{}",
     pipeline: str = "main",
     priority: int = 0,
     timed: Optional[str] = None,
     visualize: bool = False,
-    cls: str = ""
 ) -> int:
     """Submits the given experiment file.
     
     Args:
         file: The path of the experiment file.
+        cls: The class name of the experiment to be submitted.
         args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
         pipeline: The pipeline to run the experiment in.
@@ -346,8 +347,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
           None for no due date.
         visualize: If True, the experiment file is modified for visualization.
           The original file and vcd file are saved in the visualize path set in config.json.
-        cls: The class name of the experiment.
-          It is only necessary when the visualize argument is True.
+          The cls argument should be given.
     
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
@@ -375,7 +375,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     args_dict = json.loads(args)
     expid = {
         "log_level": logging.WARNING,
-        "class_name": None,
+        "class_name": cls,
         "arguments": args_dict,
         "file": submission_file_path
     }
