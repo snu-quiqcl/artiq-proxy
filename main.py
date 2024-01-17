@@ -145,9 +145,9 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await connect_moninj()
+    # await connect_moninj()
     yield
-    await mi_connection.close()
+    # await mi_connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -589,8 +589,8 @@ async def get_dataset_modification(websocket: WebSocket):
     await websocket.accept()
     try:
         name = await websocket.receive_json()
-        timestamp, data = dataset_tracker.get(name)
-        await websocket.send_json(data)
+        timestamp, dataset = dataset_tracker.get(name)
+        await websocket.send_json(dataset)
         _, parameters = dataset_tracker.get(f"{name}.parameters")
         await websocket.send_json(parameters)
         _, units = dataset_tracker.get(f"{name}.units")
