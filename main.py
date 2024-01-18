@@ -145,9 +145,9 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    # await connect_moninj()
+    await connect_moninj()
     yield
-    # await mi_connection.close()
+    await mi_connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
