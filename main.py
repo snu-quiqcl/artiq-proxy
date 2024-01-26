@@ -70,6 +70,7 @@ class MonInj:
             """
             self.value = value
             self.modified.set()
+            self.modified.clear()
 
     def __init__(self):
         """Extended."""
@@ -703,7 +704,7 @@ async def get_ttl_status(websocket: WebSocket):
     await websocket.accept()
     try:
         devices = await websocket.receive_json()
-        status = {"outputs": {}, "levels": {}, "overriding": 0}
+        status = {"outputs": {}, "levels": {}, "overriding": None}
         for device in devices:
             channel = device_db[device]["arguments"]["channel"]
             status["outputs"][device] = mi.outputs[channel].value
@@ -721,6 +722,18 @@ async def get_ttl_status(websocket: WebSocket):
                                         name=f"levels {device}")
                 ])
             tasks.append(asyncio.create_task(mi.overriding.modified.wait(), name=f"overriding"))
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            status = {"outputs": {}, "levels": {}, "overriding": None}
+            for task in done:
+                name = task.get_name()
+                ty, *device = name.split()
+                if ty == "overriding":
+                    status["overriding"] = mi.overriding.value
+                else:
+                    device = device[0]
+                    channel = device_db[device]["arguments"]["channel"]
+                    status[ty][device] = getattr(mi, ty)[channel].value
+            await websocket.send_json(status)
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the TTL status is closed.")
     except websockets.exceptions.WebSocketException:
