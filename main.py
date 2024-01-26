@@ -710,6 +710,17 @@ async def get_ttl_status(websocket: WebSocket):
             status["levels"][device] = mi.levels[channel].value
         status["overriding"] = mi.overriding.value
         await websocket.send_json(status)
+        while True:
+            tasks = []
+            for device in devices:
+                channel = device_db[device]["arguments"]["channel"]
+                tasks.extend([
+                    asyncio.create_task(mi.outputs[channel].modified.wait(),
+                                        name=f"outputs {device}"),
+                    asyncio.create_task(mi.levels[channel].modified.wait(),
+                                        name=f"levels {device}")
+                ])
+            tasks.append(asyncio.create_task(mi.overriding.modified.wait(), name=f"overriding"))
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the TTL status is closed.")
     except websockets.exceptions.WebSocketException:
