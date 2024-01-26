@@ -702,7 +702,14 @@ async def get_ttl_status(websocket: WebSocket):
     """
     await websocket.accept()
     try:
-        pass
+        devices = await websocket.receive_json()
+        status = {"outputs": {}, "levels": {}, "overriding": 0}
+        for device in devices:
+            channel = device_db[device]["arguments"]["channel"]
+            status["outputs"][device] = mi.outputs[channel].value
+            status["levels"][device] = mi.levels[channel].value
+        status["overriding"] = mi.overriding.value
+        await websocket.send_json(status)
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the TTL status is closed.")
     except websockets.exceptions.WebSocketException:
