@@ -86,7 +86,7 @@ class MonInj:
             self.outputs[channel] = MonInj.Status()
             self.levels[channel] = MonInj.Status()
         self.connection.monitor_injection(1, channel, TTLOverride.en.value)
-    
+
     def monitor_cb(self, channel: int, ty: int, value: int):
         """Callback function called when a monitoring value is changed.
         
@@ -112,7 +112,7 @@ class MonInj:
             self.overriding.update(value)
 
 
-mi = Optional[CommMonInj] = None
+mi: Optional[CommMonInj] = None
 
 
 def load_configs():
@@ -724,7 +724,7 @@ async def get_ttl_status(websocket: WebSocket):
                     asyncio.create_task(mi.levels[channel].modified.wait(),
                                         name=f"levels {device}")
                 ])
-            tasks.append(asyncio.create_task(mi.overriding.modified.wait(), name=f"overriding"))
+            tasks.append(asyncio.create_task(mi.overriding.modified.wait(), name="overriding"))
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             status = {"outputs": {}, "levels": {}, "overriding": None}
             for task in done:
