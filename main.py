@@ -45,11 +45,16 @@ class MonInj:
     
     Attributes:
         connection: The CommMonInj object connecting to ARTIQ moninj proxy.
+        outputs, levels: The dictionary containing asyncio events of each TTL status.
+          Each key is a TTL name defined in configs["ttl_devices"] and its value is an asyncio event
+          set once its status is changed. State means the actual output value for outputs and
+          the overriding level for levels.
+        overriding: The asyncio event set once the overriding is changed.
+          It acts in common with all TTLs.
     """
-
     def __init__(self):
         """Extended."""
-        self.connection = CommMonInj(do_nothing, do_nothing)
+        self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.connection.connect(configs["core_addr"])
         self.outputs: dict[str, asyncio.Event] = {}
         self.levels: dict[str, asyncio.Event] = {}
@@ -62,12 +67,24 @@ class MonInj:
             self.levels[device] = asyncio.Event()
         self.connection.monitor_injection(1, channel, TTLOverride.en.value)
     
-    def monitor_cb(self, channel, ty, value):
-        """Callback function called when a monitoring value is changed."""
+    def monitor_cb(self, channel: int, ty: int, value: int):
+        """Callback function called when a monitoring value is changed.
+        
+        Args:
+            channel: The TTL channel number.
+            ty: The type of monitoring value. See artiq.coredevice.comm_moninj.TTLProbe.
+            value: The updated monitoring value.
+        """
         pass
 
-    def injection_status_cb(self, channel, ty, value):
-        """Callback function called when an injection status is changed."""
+    def injection_status_cb(self, channel: int, ty: int, status: int):
+        """Callback function called when an injection status is changed.
+        
+        Args:
+            channel: The TTL channel number.
+            ty: The type of injection status. See artiq.coredevice.comm_moninj.TTLOverride.
+            value: The updated injection status.
+        """
         pass
 
 
