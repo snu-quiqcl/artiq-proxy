@@ -18,7 +18,7 @@ import h5py
 import numpy as np
 import pydantic
 import websockets
-from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
+from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
@@ -51,6 +51,24 @@ class MonInj:
         """Extended."""
         self.connection = CommMonInj(do_nothing, do_nothing)
         self.connection.connect(configs["core_addr"])
+        self.outputs: dict[str, asyncio.Event] = {}
+        self.levels: dict[str, asyncio.Event] = {}
+        self.overriding = asyncio.Event()
+        for device in configs["ttl_devices"]:
+            channel = device_db[device]["arguments"]["channel"]
+            self.connection.monitor_probe(1, channel, TTLProbe.level.value)
+            self.connection.monitor_injection(1, channel, TTLOverride.level.value)
+            self.outputs[device] = asyncio.Event()
+            self.levels[device] = asyncio.Event()
+        self.connection.monitor_injection(1, channel, TTLOverride.en.value)
+    
+    def monitor_cb(self, channel, ty, value):
+        """Callback function called when a monitoring value is changed."""
+        pass
+
+    def injection_status_cb(self, channel, ty, value):
+        """Callback function called when an injection status is changed."""
+        pass
 
 
 mi = Optional[CommMonInj] = None
@@ -160,9 +178,11 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await init_moninj()
+    if configs["ttl_devices"]:
+        await init_moninj()
     yield
-    await mi.connection.close()
+    if configs["ttl_devices"]:
+        await mi.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
