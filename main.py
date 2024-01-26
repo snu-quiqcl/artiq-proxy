@@ -706,6 +706,9 @@ async def get_ttl_status(websocket: WebSocket):
         devices = await websocket.receive_json()
         status = {"outputs": {}, "levels": {}, "overriding": None}
         for device in devices:
+            if device not in configs["ttl_devices"]:
+                logger.error("The TTL device %s is not defined in config.json.", device)
+                return
             channel = device_db[device]["arguments"]["channel"]
             status["outputs"][device] = mi.outputs[channel].value
             status["levels"][device] = mi.levels[channel].value
@@ -738,6 +741,20 @@ async def get_ttl_status(websocket: WebSocket):
         logger.info("The connection for sending the TTL status is closed.")
     except websockets.exceptions.WebSocketException:
         logger.exception("Failed to send the TTL status.")
+
+
+@app.post("/ttl/level/all/")
+async def set_all_ttl_levels(value: bool):
+    """Sets the overriding value of the all TTL channels.
+    
+    This only sets a value to be output when overridden, but does not turn on overriding.
+
+    Args:
+        value: The value to be output when overridden.
+    """
+    for device in configs["ttl_devices"]:
+        channel = device_db[device]["arguments"]["channel"]
+        mi.connection.inject(channel, TTLOverride.level.value, value)
 
 
 @app.post("/ttl/level/")
