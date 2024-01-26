@@ -33,8 +33,6 @@ logger = logging.getLogger(__name__)
 configs = {}
 device_db = {}
 
-mi_connection: Optional[CommMonInj] = None
-
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
@@ -147,12 +145,9 @@ async def init_dataset_tracker() -> asyncio.Task:
 
 
 async def init_moninj():
-    """Connects to ARTIQ moninj proxy and monitors it."""
-    def do_nothing(*_):
-        """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement
-    mi_connection = CommMonInj(do_nothing, do_nothing)
-    await mi_connection.connect(configs["core_addr"])
+    """Initializes a MonInj object to monitor and inject to TTLs."""
+    global mi  # pylint: disable=global-statement
+    mi = MonInj()
 
 
 @asynccontextmanager
@@ -167,7 +162,7 @@ async def lifespan(_app: FastAPI):
     _dataset_task = await init_dataset_tracker()
     await init_moninj()
     yield
-    await mi_connection.close()
+    await mi.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -648,7 +643,7 @@ async def set_ttl_level(device: str, value: bool):
         logger.error("The TTL device %s is not defined in config.json.", device)
         return
     channel = device_db[device]["arguments"]["channel"]
-    mi_connection.inject(channel, TTLOverride.level.value, value)
+    mi.connection.inject(channel, TTLOverride.level.value, value)
 
 
 @app.post("/ttl/override/")
@@ -660,7 +655,7 @@ async def set_ttl_override(value: bool):
     """
     for device in configs["ttl_devices"]:
         channel = device_db[device]["arguments"]["channel"]
-        mi_connection.inject(channel, TTLOverride.en.value, value)
+        mi.connection.inject(channel, TTLOverride.en.value, value)
 
 
 @app.post("/dac/voltage/")
