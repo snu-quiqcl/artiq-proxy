@@ -32,7 +32,7 @@ class RoutingTest(unittest.TestCase):
         patcher_dataset_tracker.start()
         patcher_init_moninj.start()
         mocked_mi = patcher_mi.start()
-        mocked_mi.close = mock.AsyncMock()
+        mocked_mi.connection = mock.AsyncMock()
         mocked_get_client = patcher_get_client.start()
         self.mocked_client = mocked_get_client.return_value
         self.addCleanup(patcher_load_configs.stop)
