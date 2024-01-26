@@ -689,6 +689,26 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
+@app.websocket("/ttl/status/")
+async def get_ttl_status(websocket: WebSocket):
+    """Sends the TTL status whenever it is modified.
+    
+    After accepted, it receives the target TTL list.
+    Then, it sends the current TTL status immediately.
+    Finally, it sends the TTL status everty time it is modified.
+
+    Args:
+        websocket: The web socket object.
+    """
+    await websocket.accept()
+    try:
+        pass
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the TTL status is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the TTL status.")
+
+
 @app.post("/ttl/level/")
 async def set_ttl_level(device: str, value: bool):
     """Sets the overriding value of the given TTL channel.
