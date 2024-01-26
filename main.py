@@ -38,6 +38,26 @@ mi_connection: Optional[CommMonInj] = None
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
+def do_nothing(*_):
+    """Gets any input, but doesn't do anything."""
+
+
+class MonInj:
+    """Manages a connection to ARTIQ moninj proxy and each TTL status.
+    
+    Attributes:
+        connection: The CommMonInj object connecting to ARTIQ moninj proxy.
+    """
+
+    def __init__(self):
+        """Extended."""
+        self.connection = CommMonInj(do_nothing, do_nothing)
+        self.connection.connect(configs["core_addr"])
+
+
+mi = Optional[CommMonInj] = None
+
+
 def load_configs():
     """Loads config information from the configuration file.
 
