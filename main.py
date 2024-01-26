@@ -126,8 +126,8 @@ async def init_dataset_tracker() -> asyncio.Task:
     return await create_subscriber_task("datasets", dataset_tracker)
 
 
-async def connect_moninj():
-    """Creates a CommMonInj instance and connects it to ARTIQ."""
+async def init_moninj():
+    """Connects to ARTIQ moninj proxy and monitors it."""
     def do_nothing(*_):
         """Gets any input, but doesn't do anything."""
     global mi_connection  # pylint: disable=global-statement
@@ -145,7 +145,7 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await connect_moninj()
+    await init_moninj()
     yield
     await mi_connection.close()
 
