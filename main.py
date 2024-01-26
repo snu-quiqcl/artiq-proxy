@@ -2,6 +2,7 @@
 
 import ast
 import asyncio
+import dataclasses
 import importlib.util
 import json
 import logging
@@ -45,26 +46,44 @@ class MonInj:
     
     Attributes:
         connection: The CommMonInj object connecting to ARTIQ moninj proxy.
-        outputs, levels: The dictionary containing asyncio events of each TTL status.
-          Each key is a TTL name defined in configs["ttl_devices"] and its value is an asyncio event
-          set once its status is changed. State means the actual output value for outputs and
-          the overriding level for levels.
-        overriding: The asyncio event set once the overriding is changed.
-          It acts in common with all TTLs.
+        outputs, levels: The dictionary with each TTL status.
+          Each key is a TTL channel number and its value is a status object. Status means
+          the actual output value for outputs and the overriding level for levels.
+        overriding: The status object for overriding. It acts in common with all TTLs.
     """
+    @dataclasses.dataclass
+    class Status:
+        """TTL status.
+        
+        Fields:
+            value: The current value.
+            modified: The asyncio event set once the value is updated.
+        """
+        value: int = 0
+        modified: asyncio.Event = asyncio.Event()
+
+        def update(self, value: int):
+            """Updates the current value and set the event.
+            
+            Args:
+                value: The updated value.
+            """
+            self.value = value
+            self.modified.set()
+
     def __init__(self):
         """Extended."""
         self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.connection.connect(configs["core_addr"])
-        self.outputs: dict[str, asyncio.Event] = {}
-        self.levels: dict[str, asyncio.Event] = {}
-        self.overriding = asyncio.Event()
+        self.outputs: dict[int, MonInj.Status] = {}
+        self.levels: dict[int, MonInj.Status] = {}
+        self.overriding = MonInj.Status()
         for device in configs["ttl_devices"]:
             channel = device_db[device]["arguments"]["channel"]
             self.connection.monitor_probe(1, channel, TTLProbe.level.value)
             self.connection.monitor_injection(1, channel, TTLOverride.level.value)
-            self.outputs[device] = asyncio.Event()
-            self.levels[device] = asyncio.Event()
+            self.outputs[channel] = MonInj.Status()
+            self.levels[channel] = MonInj.Status()
         self.connection.monitor_injection(1, channel, TTLOverride.en.value)
     
     def monitor_cb(self, channel: int, ty: int, value: int):
@@ -75,9 +94,10 @@ class MonInj:
             ty: The type of monitoring value. See artiq.coredevice.comm_moninj.TTLProbe.
             value: The updated monitoring value.
         """
-        pass
+        if ty == TTLProbe.level.value:
+            self.outputs[channel].update(value)
 
-    def injection_status_cb(self, channel: int, ty: int, status: int):
+    def injection_status_cb(self, channel: int, ty: int, value: int):
         """Callback function called when an injection status is changed.
         
         Args:
@@ -85,7 +105,10 @@ class MonInj:
             ty: The type of injection status. See artiq.coredevice.comm_moninj.TTLOverride.
             value: The updated injection status.
         """
-        pass
+        if ty == TTLOverride.level.value:
+            self.levels[channel].update(value)
+        elif ty == TTLOverride.en.value:
+            self.overriding.update(value)
 
 
 mi = Optional[CommMonInj] = None
