@@ -59,7 +59,7 @@ class MonInj:
             value: The current value.
             modified: The asyncio event set once the value is updated.
         """
-        value: int = 0
+        value: Optional[bool] = None
         modified: asyncio.Event = asyncio.Event()
 
         def update(self, value: int):
@@ -68,7 +68,7 @@ class MonInj:
             Args:
                 value: The updated value.
             """
-            self.value = value
+            self.value = bool(value)
             self.modified.set()
             self.modified.clear()
 
