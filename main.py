@@ -75,10 +75,13 @@ class MonInj:
     def __init__(self):
         """Extended."""
         self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
-        self.connection.connect(configs["core_addr"])
         self.outputs: dict[int, MonInj.Status] = {}
         self.levels: dict[int, MonInj.Status] = {}
         self.overriding = MonInj.Status()
+
+    async def connect(self):
+        """Connects to ARTIQ moninj proxy."""
+        await self.connection.connect(configs["core_addr"])
         for device in configs["ttl_devices"]:
             channel = device_db[device]["arguments"]["channel"]
             self.connection.monitor_probe(1, channel, TTLProbe.level.value)
@@ -207,6 +210,7 @@ async def init_moninj():
     """Initializes a MonInj object to monitor and inject to TTLs."""
     global mi  # pylint: disable=global-statement
     mi = MonInj()
+    await mi.connect()
 
 
 @asynccontextmanager
