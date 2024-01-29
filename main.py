@@ -403,6 +403,23 @@ async def submit_experiment(  # pylint: disable=too-many-arguments, too-many-loc
     return rid
 
 
+@app.get("/experiment/status/")
+async def get_status(rid: int) -> Optional[dict]:
+    """Gets the current status of the given RID.
+    
+    Args:
+        rid: The run identifier value of the experiment.
+    
+    Returns:
+        A status dictionary with "pipeline", "expid", "priority", "due_date", "status", etc.
+        If the experiment is done or cancelled, it returns None.
+        For details, see notification in artiq.master.scheduler.Run.__init__().
+    """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    return status.get(rid, None)
+
+
 @app.get("/experiment/running/")
 async def get_running_experiment() -> Optional[int]:
     """Gets the running experiment RID.
