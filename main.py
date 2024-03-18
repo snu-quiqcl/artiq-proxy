@@ -550,6 +550,7 @@ async def list_result_directory() -> list[int]:
     rid_list.sort()
     return rid_list
 
+
 @app.get("/rid/list/")
 async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list[int]:
     """Returns the list of RIDs corresponding the given date and hour.
@@ -564,6 +565,7 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
     result_file_list = glob.glob(result_file_path)
     rid_list = sorted([int(os.path.basename(result_file)[:9]) for result_file in result_file_list])
     return rid_list
+
 
 @app.get("/dataset/master/")
 async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
