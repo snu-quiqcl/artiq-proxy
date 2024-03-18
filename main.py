@@ -585,6 +585,11 @@ async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
 
 @app.get("/dataset/rid/list/")
 async def list_dataset_from_rid(rid: int) -> list[str]:
+    """Returns the list of dataset names in the result file of the given RID.
+    
+    Args:
+        rid: Target run identifier value.
+    """
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
     result_file_list = glob.glob(result_file_path)
