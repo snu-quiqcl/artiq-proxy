@@ -534,7 +534,7 @@ async def list_result_directory() -> list[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> Union[int, float, list]:
+async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
     """Returns the dataset broadcast to artiq master.
 
     Args:
@@ -561,12 +561,10 @@ async def list_dataset(websocket: WebSocket):
     """
     await websocket.accept()
     try:
-        datasets = dataset_tracker.datasets()
-        await websocket.send_json(datasets)
+        await websocket.send_json(dataset_tracker.datasets())
         while True:
-            await asyncio.wait_for(dataset_tracker.list_modified.wait(), None)
-            datasets = dataset_tracker.datasets()
-            await websocket.send_json(datasets)
+            await dataset_tracker.list_modified.wait()
+            await websocket.send_json(dataset_tracker.datasets())
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the dataset list is closed.")
     except websockets.exceptions.WebSocketException:
@@ -589,21 +587,20 @@ async def get_dataset_modification(websocket: WebSocket):
     await websocket.accept()
     try:
         name = await websocket.receive_json()
-        timestamp, dataset = dataset_tracker.get(name)
+        latest, dataset = dataset_tracker.get(name)
         await websocket.send_json(dataset)
         _, parameters = dataset_tracker.get(f"{name}.parameters")
         await websocket.send_json(parameters)
         _, units = dataset_tracker.get(f"{name}.units")
         await websocket.send_json(units)
         while True:
-            await asyncio.wait_for(dataset_tracker.modified[name].wait(), None)
-            latest, modifications = dataset_tracker.since(name, timestamp)
+            await dataset_tracker.modified[name].wait()
+            latest, modifications = dataset_tracker.since(name, latest)
             if latest < 0:  # dataset is overwritten or removed
                 await websocket.send_json(None)
                 break
-            if latest > timestamp + 1:  # changes within 1 second are buffered
-                timestamp = latest
-                await websocket.send_json(modifications)
+            await websocket.send_json(modifications)
+            await asyncio.sleep(1)
     except websockets.exceptions.ConnectionClosedError:
         logger.info("The connection for sending the dataset modification is closed.")
     except websockets.exceptions.WebSocketException:
