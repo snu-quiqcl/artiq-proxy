@@ -551,52 +551,77 @@ async def list_result_directory() -> list[int]:
 
 
 @app.get("/dataset/master/")
-async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
-    """Returns the current timestamp and the dataset broadcast to artiq master.
+async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
+    """Returns the dataset broadcast to artiq master.
 
     Args:
         key: The key of the target dataset.
 
     Returns:
-        If the dataset is not initialized or does not exist, it returns (-1, ()).
+        If the dataset is not initialized or does not exist, it returns an empty tuple.
     """
-    timestamp, array = dataset_tracker.get(key)
-    if isinstance(array, np.ndarray):
-        array = array.tolist()
-    return timestamp, array
+    _, data = dataset_tracker.get(key)
+    if isinstance(data, np.ndarray):
+        data = data.tolist()
+    return data
 
 
-@app.get("/dataset/master/list/")
-async def list_dataset() -> tuple[str, ...]:
-    """Returns the list of datasets available in artiq master."""
-    return dataset_tracker.datasets()
-
-
-@app.get("/dataset/master/modification/")
-async def get_dataset_modification(
-    key: str, timestamp: float, timeout: Optional[float],
-) -> tuple[float, tuple[dset.Modification, ...]]:
-    """Returns the dataset modifications since the given timestamp.
+@app.websocket("/dataset/master/list/")
+async def list_dataset(websocket: WebSocket):
+    """Sends the list of datasets available in artiq master whenever it is modified.
     
-    See dataset.DatasetTracker.since() for details.
+    After accepted, it sends the current dataset list immediately.
+    Then, it sends the dataset list every time it is modified.
 
     Args:
-        key: The key of the target dataset.
-        timestamp: The timestamp of the last update.
-        timeout: The timeout in seconds for awaiting new modifications.
-          None for no timeout (wait until done), and 0 or negative for non-blocking.
-          The actual execution time might exceed the timeout because of the
-          since() calls are not timed. Although the timeout becomes less precise,
-          it can guarantee a valid return value for even short timeouts.
+        websocket: The web socket object.
     """
-    latest, modifications = dataset_tracker.since(key, timestamp)
-    if modifications or latest < 0 or (timeout is not None and timeout <= 0):
-        return latest, modifications
+    await websocket.accept()
     try:
-        await asyncio.wait_for(dataset_tracker.modified[key].wait(), timeout)
-    except asyncio.TimeoutError:
-        return latest, modifications
-    return dataset_tracker.since(key, timestamp)
+        await websocket.send_json(dataset_tracker.datasets())
+        while True:
+            await dataset_tracker.list_modified.wait()
+            await websocket.send_json(dataset_tracker.datasets())
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the dataset list is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the dataset list.")
+
+
+@app.websocket("/dataset/master/modification/")
+async def get_dataset_modification(websocket: WebSocket):
+    """Sends the specific dataset modification whenever it is modified.
+
+    After accepted, it receives the target dataset name.
+    Then, it sends the current dataset, parameters, and units immediately.
+    Finally, it sends the dataset modificiation at least a second apart, every time it is modified.
+
+    For details about dataset modificiation, see dataset.DatasetTracker.since().
+
+    Args:
+        websocket: The web socket object.
+    """
+    await websocket.accept()
+    try:
+        name = await websocket.receive_json()
+        latest, dataset = dataset_tracker.get(name)
+        await websocket.send_json(dataset)
+        _, parameters = dataset_tracker.get(f"{name}.parameters")
+        await websocket.send_json(parameters)
+        _, units = dataset_tracker.get(f"{name}.units")
+        await websocket.send_json(units)
+        while True:
+            await dataset_tracker.modified[name].wait()
+            latest, modifications = dataset_tracker.since(name, latest)
+            if latest < 0:  # dataset is overwritten or removed
+                await websocket.send_json(None)
+                break
+            await websocket.send_json(modifications)
+            await asyncio.sleep(1)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the dataset modification is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the dataset modification.")
 
 
 class ResultFileType(str, Enum):

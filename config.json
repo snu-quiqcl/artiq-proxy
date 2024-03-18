@@ -1,5 +1,5 @@
 {
-    "master_path": "/home/rabi/artiq/",
+    "master_path": "/home/quiqcl/artiq/",
     "repository_path": "repository/",
     "result_path": "results/",
     "device_db_path": "device_db.py",

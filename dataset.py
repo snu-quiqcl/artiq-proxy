@@ -64,14 +64,16 @@ class SortedQueue(Generic[K, V]):
         return latest_key, values
 
 
+Dataset = dict[str, Any]
 Modification = dict[str, Any]
 ModificationQueue = SortedQueue[float, Modification]
 
 
-class DatasetTracker(Tracker[dict[str, Any]]):
+class DatasetTracker(Tracker[Dataset]):
     """Holds dataset modifications and provides searching API.
     
     Attributes:
+        list_modified: The event set when the dataset list is modified.
         modified: Dict(key=dataset_name, value=event) where the event is set
           when any new modification to the dataset is added.
     """
@@ -82,6 +84,7 @@ class DatasetTracker(Tracker[dict[str, Any]]):
             maxlen: The maximum length of modification queues.
         """
         super().__init__()
+        self.list_modified = asyncio.Event()
         self.modified: dict[str, asyncio.Event] = {}
         self._maxlen = maxlen
         self._modifications: dict[str, ModificationQueue] = {}
@@ -99,12 +102,15 @@ class DatasetTracker(Tracker[dict[str, Any]]):
               overwritten by the new one. Since the old one is deleted, the time
               is saved in _last_deleted.
         """
-        if dataset in self._modifications:
+        overwritten = dataset in self._modifications
+        if overwritten:
             self._last_deleted[dataset] = time.time()
             logger.warning("Dataset %s already exists hence is replaced.", dataset)
             self._notify_modified(dataset)
         self._modifications[dataset] = ModificationQueue(self._maxlen)
         self.modified[dataset] = asyncio.Event()
+        if not overwritten:
+            self._notify_list_modified()
 
     def remove_dataset(self, dataset: str):
         """Removes a dataset entry.
@@ -119,6 +125,8 @@ class DatasetTracker(Tracker[dict[str, Any]]):
         self._last_deleted[dataset] = time.time()
         self._notify_modified(dataset)
         self.modified.pop(dataset)
+        self._notify_list_modified()
+
 
     def add(self, dataset: str, timestamp: float, modification: Modification):
         """Adds a modification record.
@@ -177,8 +185,16 @@ class DatasetTracker(Tracker[dict[str, Any]]):
             return -1, ()
         return time.time(), value[1]  # value = persist, data, metadata
 
+    def _notify_list_modified(self):
+        """Sets and clears the modified event for the dataset list.
+        
+        All the coroutines that are waiting for the modified event will be awakened.
+        """
+        self.list_modified.set()
+        self.list_modified.clear()
+
     def _notify_modified(self, dataset: str):
-        """Sets and clears the modified event.
+        """Sets and clears the modified event for the specific dataset.
 
         All the coroutines that are waiting for the modified event will be awakened.
         
