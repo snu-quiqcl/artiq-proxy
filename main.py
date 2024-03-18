@@ -552,6 +552,12 @@ async def list_result_directory() -> list[int]:
 
 @app.get("/rid/list/")
 async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list[int]:
+    """Returns the list of RIDs corresponding the given date and hour.
+    
+    Args:
+        date: Target date with the format "yyyy-mm-dd".
+        hour: Target hour. If None, it searches for all hours.
+    """
     result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
     result_file_path = posixpath.join(result_dir_path, date,
                                       "*" if hour is None else str(hour), "*.h5")
