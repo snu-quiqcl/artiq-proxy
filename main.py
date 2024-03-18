@@ -583,6 +583,17 @@ async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
     return data
 
 
+@app.get("/dataset/rid/list/")
+async def list_dataset_from_rid(rid: int) -> list[str]:
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
+    result_file_list = glob.glob(result_file_path)
+    if len(result_file_list) != 1:
+        return []
+    with h5py.File(result_file_list[0], "r") as result_file:
+        return sorted(list(result_file["datasets"].keys()))
+
+
 @app.websocket("/dataset/master/list/")
 async def list_dataset(websocket: WebSocket):
     """Sends the list of datasets available in artiq master whenever it is modified.
