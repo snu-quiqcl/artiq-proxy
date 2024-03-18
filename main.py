@@ -549,6 +549,9 @@ async def list_result_directory() -> list[int]:
     rid_list.sort()
     return rid_list
 
+@app.get("/rid/list/")
+async def list_rid_from_date_hour(date: str, hour: Optional[int]) -> list[int]:
+    pass
 
 @app.get("/dataset/master/")
 async def get_master_dataset(key: str) -> tuple[float, Union[int, float, list]]:
