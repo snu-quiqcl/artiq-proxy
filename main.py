@@ -567,6 +567,11 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
     return rid_list
 
 
+@app.get("/dataset/rid/")
+async def get_rid_dataset(rid: int, key: str) -> Union[int, float, list]:
+    pass
+
+
 @app.get("/dataset/master/")
 async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
     """Returns the dataset broadcast to artiq master.
