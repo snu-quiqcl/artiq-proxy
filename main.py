@@ -568,8 +568,19 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
 
 
 @app.get("/dataset/rid/")
-async def get_rid_dataset(rid: int, key: str) -> Union[int, float, list]:
-    pass
+async def get_rid_dataset(rid: int, key: str) -> Optional[Union[int, float, list]]:
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
+    result_file_list = glob.glob(result_file_path)
+    if len(result_file_list) != 1:
+        return None
+    with h5py.File(result_file_list[0], "r") as result_file:
+        if key not in result_file["datasets"].keys():
+            return None
+        data = result_file["datasets"][key][()]
+        if isinstance(data, np.ndarray):
+            data = data.tolist()
+        return data
 
 
 @app.get("/dataset/master/")
