@@ -2,6 +2,7 @@
 
 import ast
 import asyncio
+import dataclasses
 import enum
 import glob
 import importlib.util
@@ -47,6 +48,21 @@ class MonInj:
         PROBE = enum.auto()
         LEVEL = enum.auto()
         OVERRIDE = enum.auto()
+
+    @dataclasses.dataclass
+    class StatusType:
+        """Monitoring status type.
+        
+        Fields:
+            channel: Monitoring TTL channel number.
+            monitor_type: Monitoring value type.
+        """
+        channel: int
+        monitor_type: "MonInj.MonitorType"
+
+        def __hash__(self) -> int:
+            """Overridden."""
+            return hash(f"{str(self.channel)}_{self.monitor_type.name}")
 
 
 def load_configs():
