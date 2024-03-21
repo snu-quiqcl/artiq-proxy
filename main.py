@@ -567,6 +567,23 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
     return rid_list
 
 
+def get_result_file_from_rid(rid: int) -> Optional[str]:
+    """Returns the result file corresponding to the given RID.
+    
+    Args:
+        rid: Target run identifier value.
+
+    Returns:
+        If the result file does not exist, it returns None.
+    """
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
+    result_file_list = glob.glob(result_file_path)
+    if len(result_file_list) != 1:
+        return None
+    return result_file_list[0]
+
+
 @app.get("/dataset/rid/")
 async def get_rid_dataset(rid: int, key: str) -> Optional[Union[int, float, list]]:
     """Returns the dataset in the result file of the given RID.
