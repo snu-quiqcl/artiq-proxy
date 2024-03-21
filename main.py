@@ -2,6 +2,7 @@
 
 import ast
 import asyncio
+import enum
 import glob
 import importlib.util
 import json
@@ -38,6 +39,15 @@ mi_connection: Optional[CommMonInj] = None
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
+
+class MonInj:
+
+    class MonitorType(enum.Enum):
+        """Monitoring value type."""
+        PROBE = enum.auto()
+        LEVEL = enum.auto()
+        OVERRIDE = enum.auto()
+
 
 def load_configs():
     """Loads config information from the configuration file.
