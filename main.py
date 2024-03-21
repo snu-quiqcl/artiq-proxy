@@ -44,6 +44,11 @@ schedule_tracker: Optional[schd.ScheduleTracker] = None
 
 class MonInj:
     """Manages the connection to ARTIQ moninj proxy and TTL status.
+
+    Variables:
+        ModificationQueue: SortedQueue for modifications of TTL status.
+        device_to_channel, channel_to_device:
+          Maps a TTL device name with its channel number, and vice versa.
     
     Attributes:
         queue: SortedQueue with modified StatusType.
@@ -73,11 +78,21 @@ class MonInj:
             return hash(f"{str(self.channel)}_{self.monitor_type.name}")
 
     ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
+    device_to_channel: dict[str, int]
+    channel_to_device: dict[int, str]
 
     def __init__(self):
         self.queue = MonInj.ModificationQueue()
         self.values: dict[MonInj.StatusType, int] = {}
         self.modified = asyncio.Event()
+
+    @classmethod
+    def map_device_channel(cls):
+        """Maps TTL devices and channels."""
+        for device in configs["ttl_devices"]:
+            channel = device_db[device]["arguments"]["channel"]
+            cls.device_to_channel[device] = channel
+            cls.channel_to_device[channel] = device
 
 
 def load_configs():
