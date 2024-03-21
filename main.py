@@ -595,12 +595,10 @@ async def get_rid_dataset(rid: int, key: str) -> Optional[Union[int, float, list
     Returns:
         If the dataset does not exist, it returns None.
     """
-    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
-    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
-    result_file_list = glob.glob(result_file_path)
-    if len(result_file_list) != 1:
+    result_file = get_result_file_from_rid(rid)
+    if result_file is None:
         return None
-    with h5py.File(result_file_list[0], "r") as result_file:
+    with h5py.File(result_file, "r") as result_file:
         if key not in result_file["datasets"].keys():
             return None
         data = result_file["datasets"][key][()]
@@ -632,12 +630,10 @@ async def list_dataset_from_rid(rid: int) -> list[str]:
     Args:
         rid: Target run identifier value.
     """
-    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
-    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
-    result_file_list = glob.glob(result_file_path)
-    if len(result_file_list) != 1:
+    result_file = get_result_file_from_rid(rid)
+    if result_file is None:
         return []
-    with h5py.File(result_file_list[0], "r") as result_file:
+    with h5py.File(result_file, "r") as result_file:
         return sorted(list(result_file["datasets"].keys()))
 
 
