@@ -567,6 +567,46 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
     return rid_list
 
 
+def get_result_file_from_rid(rid: int) -> Optional[str]:
+    """Returns the result file corresponding to the given RID.
+    
+    Args:
+        rid: Target run identifier value.
+
+    Returns:
+        If the result file does not exist, it returns None.
+    """
+    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
+    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
+    result_file_list = glob.glob(result_file_path)
+    if len(result_file_list) != 1:
+        return None
+    return result_file_list[0]
+
+
+@app.get("/dataset/rid/")
+async def get_rid_dataset(rid: int, key: str) -> Optional[Union[int, float, list]]:
+    """Returns the dataset in the result file of the given RID.
+    
+    Args:
+        rid: Target run identifier value.
+        key: Target dataset key.
+    
+    Returns:
+        If the dataset does not exist, it returns None.
+    """
+    result_file = get_result_file_from_rid(rid)
+    if result_file is None:
+        return None
+    with h5py.File(result_file, "r") as result_file:
+        if key not in result_file["datasets"].keys():
+            return None
+        data = result_file["datasets"][key][()]
+        if isinstance(data, np.ndarray):
+            data = data.tolist()
+        return data
+
+
 @app.get("/dataset/master/")
 async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
     """Returns the dataset broadcast to artiq master.
@@ -590,12 +630,10 @@ async def list_dataset_from_rid(rid: int) -> list[str]:
     Args:
         rid: Target run identifier value.
     """
-    result_dir_path = posixpath.join(configs["master_path"], configs["result_path"])
-    result_file_path = posixpath.join(result_dir_path, "*", "*", f"{str(rid).zfill(9)}*.h5")
-    result_file_list = glob.glob(result_file_path)
-    if len(result_file_list) != 1:
+    result_file = get_result_file_from_rid(rid)
+    if result_file is None:
         return []
-    with h5py.File(result_file_list[0], "r") as result_file:
+    with h5py.File(result_file, "r") as result_file:
         return sorted(list(result_file["datasets"].keys()))
 
 
