@@ -56,11 +56,12 @@ class MonInj:
         modified: Event set when any value is modified.
     """
 
+    @enum.unique
     class MonitorType(enum.Enum):
         """Monitoring value type."""
-        PROBE = enum.auto()
-        LEVEL = enum.auto()
-        OVERRIDE = enum.auto()
+        PROBE = "probe"
+        LEVEL = "level"
+        OVERRIDE = "override"
 
     @dataclasses.dataclass
     class StatusType:
@@ -75,7 +76,7 @@ class MonInj:
 
         def __hash__(self) -> int:
             """Overridden."""
-            return hash(f"{str(self.channel)}_{self.monitor_type.name}")
+            return hash(f"{str(self.channel)}_{self.monitor_type.value}")
 
     ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
     device_to_channel: dict[str, int]
@@ -93,6 +94,22 @@ class MonInj:
             channel = device_db[device]["arguments"]["channel"]
             cls.device_to_channel[device] = channel
             cls.channel_to_device[channel] = device
+
+    def current_status(self, devices: list[str]) -> dict[str, dict[str, int]]:
+        """Returns the current status.
+        
+        Args:
+            devices: List of target TTL device names.
+        
+        Returns:
+            TODO(BECATRUE): It will be updated in this issue.
+        """
+        status = {ty.value: {} for ty in MonInj.MonitorType}
+        for device in devices:
+            channel = MonInj.device_to_channel(device)
+            for ty in MonInj.MonitorType:
+                status[ty.value][device] = self.values[MonInj.StatusType(channel, ty)]
+        return status
 
 
 def load_configs():
