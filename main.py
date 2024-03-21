@@ -27,9 +27,10 @@ from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
-import tracker as trck
 import dataset as dset
 import schedule as schd
+import tracker as trck
+from protocols import SortedQueue
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,13 @@ dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
 class MonInj:
+    """Manages the connection to ARTIQ moninj proxy and TTL status.
+    
+    Attributes:
+        queue: SortedQueue with modified StatusType.
+        values: Dictionary whose keys are StatusType and values are modified values.
+        modified: Event set when any value is modified.
+    """
 
     class MonitorType(enum.Enum):
         """Monitoring value type."""
@@ -63,6 +71,13 @@ class MonInj:
         def __hash__(self) -> int:
             """Overridden."""
             return hash(f"{str(self.channel)}_{self.monitor_type.name}")
+
+    ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
+
+    def __init__(self):
+        self.queue = MonInj.ModificationQueue()
+        self.values: dict[MonInj.StatusType, int] = {}
+        self.modified = asyncio.Event()
 
 
 def load_configs():
