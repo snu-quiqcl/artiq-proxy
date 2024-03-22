@@ -873,6 +873,17 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
+class TTLControlInfo(pydantic.BaseModel):
+    """TTL control information.
+    
+    Fields:
+        devices, values: List of TTL device name in the device DB and value to be modified,
+          repectively. The lengths of these lists should be identical. 
+    """
+    devices: list[str]
+    values: list[bool]
+
+
 @app.post("/ttl/level/")
 async def set_ttl_level(device: str, value: bool):
     """Sets the overriding value of the given TTL channel.
