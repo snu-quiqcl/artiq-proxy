@@ -143,7 +143,7 @@ class MonInj:
         )
         for ty in filtered_modification_types:
             device = MonInj.channel_to_device[ty.channel]
-            modifications[ty.monitor_type][device] = self.values[ty]
+            modifications[ty.monitor_type.value][device] = self.values[ty]
         return latest, modifications
 
     def _notify_modified(self):
