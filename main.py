@@ -184,6 +184,9 @@ class MonInj:
         self._notify_modified()
 
 
+mi: MonInj
+
+
 def load_configs():
     """Loads config information from the configuration file.
 
@@ -272,13 +275,11 @@ async def init_dataset_tracker() -> asyncio.Task:
     return await create_subscriber_task("datasets", dataset_tracker)
 
 
-async def connect_moninj():
-    """Creates a CommMonInj instance and connects it to ARTIQ."""
-    def do_nothing(*_):
-        """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement
-    mi_connection = CommMonInj(do_nothing, do_nothing)
-    await mi_connection.connect(configs["core_addr"])
+async def init_moninj():
+    """Initializes a MonInj object connecting to ARTIQ moninj proxy."""
+    global mi  # pylint: disable=global-statement
+    mi = MonInj()
+    await mi.connect()
 
 
 @asynccontextmanager
@@ -291,7 +292,7 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await connect_moninj()
+    await init_moninj()
     yield
     await mi_connection.close()
 
