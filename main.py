@@ -80,7 +80,7 @@ class MonInj:
             """Overridden."""
             return hash(f"{str(self.channel)}_{self.monitor_type.value}")
 
-    Modifications = dict[str, dict[str, int]]
+    Modifications = dict[str, dict[str, bool]]
     ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
     device_to_channel: dict[str, int]
     channel_to_device: dict[int, str]
@@ -88,7 +88,7 @@ class MonInj:
     def __init__(self):
         self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.queue = MonInj.ModificationQueue()
-        self.values: dict[MonInj.StatusType, int] = {}
+        self.values: dict[MonInj.StatusType, bool] = {}
         self.modified = asyncio.Event()
 
     @classmethod
@@ -161,7 +161,7 @@ class MonInj:
             value: Modified monitoring value.
         """
         status_type = MonInj.StatusType(channel, MonInj.MonitorType.PROBE)
-        self.values[status_type] = value
+        self.values[status_type] = bool(value)
         self.queue.push(time.time(), status_type)
         self._notify_modified()
 
@@ -178,7 +178,7 @@ class MonInj:
             TTLOverride.en.value: MonInj.MonitorType.OVERRIDE
         }
         status_type = MonInj.StatusType(channel, ty_to_monitor_type[ty])
-        self.values[status_type] = value
+        self.values[status_type] = bool(value)
         self.queue.push(time.time(), status_type)
         self._notify_modified()
 
