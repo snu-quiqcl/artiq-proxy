@@ -885,20 +885,20 @@ class TTLControlInfo(pydantic.BaseModel):
 
 
 @app.post("/ttl/level/")
-async def set_ttl_level(device: str, value: bool):
-    """Sets the overriding value of the given TTL channel.
+async def set_ttl_level(control_info: TTLControlInfo):
+    """Sets the overriding values of the given TTL channels.
     
-    This only sets a value to be output when overridden, but does not turn on overriding.
+    This only sets the value to be output when overridden, but does not turn on overriding.
 
     Args:
-        device: The TTL device name described in device_db.py.
-        value: The value to be output when overridden.
+        control_info: Request body. See the fields section in TTLControlInfo.
     """
-    if device not in configs["ttl_devices"]:
-        logger.error("The TTL device %s is not defined in config.json.", device)
-        return
-    channel = device_db[device]["arguments"]["channel"]
-    mi_connection.inject(channel, TTLOverride.level.value, value)
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = MonInj.device_to_channel[device]
+        mi.connection.inject(channel, TTLOverride.level.value, value)
 
 
 @app.post("/ttl/override/")
