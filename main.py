@@ -46,6 +46,9 @@ class MonInj:
     """Manages the connection to ARTIQ moninj proxy and TTL status.
 
     Variables:
+        Modifications: Type of modifications.
+          It is a dictionary whose key is one of MonitorType values. Each value is a dictionary
+          whose key is a TTL channel number and value is the modified value.
         ModificationQueue: SortedQueue for modifications of TTL status.
         device_to_channel, channel_to_device:
           Maps a TTL device name with its channel number, and vice versa.
@@ -78,6 +81,7 @@ class MonInj:
             """Overridden."""
             return hash(f"{str(self.channel)}_{self.monitor_type.value}")
 
+    Modifications = dict[str, dict[str, int]]
     ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
     device_to_channel: dict[str, int]
     channel_to_device: dict[int, str]
@@ -95,21 +99,43 @@ class MonInj:
             cls.device_to_channel[device] = channel
             cls.channel_to_device[channel] = device
 
-    def current_status(self, devices: list[str]) -> dict[str, dict[str, int]]:
+    def current_status(self, devices: list[str]) -> "MonInj.Modifications":
         """Returns the current status.
         
         Args:
             devices: List of target TTL device names.
         
         Returns:
-            TODO(BECATRUE): It will be updated in this issue.
+            See Modifications in the variables section for detailed structure.
         """
-        status = {ty.value: {} for ty in MonInj.MonitorType}
+        modifications = {ty.value: {} for ty in MonInj.MonitorType}
         for device in devices:
-            channel = MonInj.device_to_channel(device)
+            channel = MonInj.device_to_channel[device]
             for ty in MonInj.MonitorType:
-                status[ty.value][device] = self.values[MonInj.StatusType(channel, ty)]
-        return status
+                modifications[ty.value][device] = self.values[MonInj.StatusType(channel, ty)]
+        return modifications
+
+    def modifications_since(
+        self, devices: list[str], timestamp: float
+    ) -> tuple[float, "MonInj.Modifications"]:
+        """Returns the latest timestamp and modifications since the given timestamp.
+        
+        Args:
+            devices: List of target TTL device names.
+            timestamp: Timestamp of the latest update.
+
+        Returns:
+            See Modifications in the variables section for detailed structure of the modifications.
+        """
+        modifications = {ty.value: {} for ty in MonInj.MonitorType}
+        latest, modification_types = self.queue.tail(timestamp)
+        filtered_modification_types = filter(
+            lambda ty: MonInj.channel_to_device[ty.channel] in devices, set(modification_types)
+        )
+        for ty in filtered_modification_types:
+            device = MonInj.channel_to_device[ty.channel]
+            modifications[ty.monitor_type][device] = self.values[ty]
+        return latest, modifications
 
 
 def load_configs():
