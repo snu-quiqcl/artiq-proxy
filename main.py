@@ -21,7 +21,7 @@ import h5py
 import numpy as np
 import pydantic
 import websockets
-from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
+from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
@@ -87,6 +87,7 @@ class MonInj:
     channel_to_device: dict[int, str]
 
     def __init__(self):
+        self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.queue = MonInj.ModificationQueue()
         self.values: dict[MonInj.StatusType, int] = {}
         self.modified = asyncio.Event()
@@ -98,6 +99,15 @@ class MonInj:
             channel = device_db[device]["arguments"]["channel"]
             cls.device_to_channel[device] = channel
             cls.channel_to_device[channel] = device
+
+    async def connect(self):
+        """Connects to ARTIQ moninj proxy."""
+        await self.connection.connect(configs["core_addr"])
+        for device in configs["ttl_devices"]:
+            channel = MonInj.device_to_channel[device]
+            self.connection.monitor_probe(1, channel, TTLProbe.level.value)
+            self.connection.monitor_injection(1, channel, TTLOverride.level.value)
+            self.connection.monitor_injection(1, channel, TTLOverride.en.value)
 
     def current_status(self, devices: list[str]) -> "MonInj.Modifications":
         """Returns the current status.
@@ -136,6 +146,12 @@ class MonInj:
             device = MonInj.channel_to_device[ty.channel]
             modifications[ty.monitor_type][device] = self.values[ty]
         return latest, modifications
+
+    def monitor_cb(self, channel: int, ty: int, value: int):
+        pass
+
+    def injection_status_cb(self, channel: int, ty: int, value: int):
+        pass
 
 
 def load_configs():
