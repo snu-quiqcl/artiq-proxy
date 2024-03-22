@@ -147,11 +147,41 @@ class MonInj:
             modifications[ty.monitor_type][device] = self.values[ty]
         return latest, modifications
 
-    def monitor_cb(self, channel: int, ty: int, value: int):
-        pass
+    def _notify_modified(self):
+        """Sets and clears the modified event for the queue."""
+        self.modified.set()
+        self.modified.clear()
+
+    def monitor_cb(self, channel: int, _ty: int, value: int):
+        """Callback function called when any monitoring value is modified.
+        
+        Args:
+            channel: TTL channel number.
+            _ty: Type of monitoring value. See artiq.coredevice.comm_moninj.TTLProbe.
+              It monitors only "TTLProbe.level", hence this is not used.
+            value: Modified monitoring value.
+        """
+        status_type = MonInj.StatusType(channel, MonInj.MonitorType.PROBE)
+        self.values[status_type] = value
+        self.queue.push(time.time(), status_type)
+        self._notify_modified()
 
     def injection_status_cb(self, channel: int, ty: int, value: int):
-        pass
+        """Callback function called when any injection status is modified.
+        
+        Args:
+            channel: TTL channel number.
+            ty: Type of injection status. See artiq.coredevice.comm_moninj.TTLOverride.
+            value: Modified injection status.
+        """
+        ty_to_monitor_type = {
+            TTLOverride.level.value: MonInj.MonitorType.LEVEL,
+            TTLOverride.en.value: MonInj.MonitorType.OVERRIDE
+        }
+        status_type = MonInj.StatusType(channel, ty_to_monitor_type[ty])
+        self.values[status_type] = value
+        self.queue.push(time.time(), status_type)
+        self._notify_modified()
 
 
 def load_configs():
