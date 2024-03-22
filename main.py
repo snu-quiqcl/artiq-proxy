@@ -107,21 +107,21 @@ class MonInj:
             self.connection.monitor_injection(1, channel, TTLOverride.level.value)
             self.connection.monitor_injection(1, channel, TTLOverride.en.value)
 
-    def current_status(self, devices: list[str]) -> "MonInj.Modifications":
-        """Returns the current status.
+    def current_status(self, devices: list[str]) -> tuple[float, "MonInj.Modifications"]:
+        """Returns the current timestamp and status.
         
         Args:
             devices: List of target TTL device names.
         
         Returns:
-            See Modifications in the variables section for detailed structure.
+            See Modifications in the variables section for detailed structure of the status.
         """
         modifications = {ty.value: {} for ty in MonInj.MonitorType}
         for device in devices:
             channel = MonInj.device_to_channel[device]
             for ty in MonInj.MonitorType:
                 modifications[ty.value][device] = self.values[MonInj.StatusType(channel, ty)]
-        return modifications
+        return time.time(), modifications
 
     def modifications_since(
         self, devices: list[str], timestamp: float
@@ -880,6 +880,37 @@ class TTLControlInfo(pydantic.BaseModel):
     """
     devices: list[str]
     values: list[bool]
+
+
+@app.websocket("/ttl/status/modification/")
+async def get_ttl_status_modification(websocket: WebSocket):
+    """Sends the modifications of TTL status whenever it is modified.
+    
+    After accepted, it receives the target TTL list.
+    Then, it sends the current TTL status immediately.
+    Finally, it sends the modifications of TTL status everty time it is modified.
+
+    See Modifications in the variables section of MonInj for modifications structure.
+
+    Args:
+        websocket: The web socket object.
+    """
+    await websocket.accept()
+    try:
+        devices = await websocket.receive_json()
+        latest, status = mi.current_status(devices)
+        await websocket.send_json(status)
+        while True:
+            latest, modifications = mi.modifications_since(devices, latest)
+            if not sum(len(m) for m in modifications.values()):  # no modification
+                await mi.modified.wait()
+                continue
+            await websocket.send_json(modifications)
+            await asyncio.sleep(0.5)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the modifications of TTL status is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the modifications of TTL status.")
 
 
 @app.post("/ttl/level/")
