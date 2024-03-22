@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
