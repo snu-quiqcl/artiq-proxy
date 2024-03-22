@@ -37,8 +37,6 @@ logger = logging.getLogger(__name__)
 configs = {}
 device_db = {}
 
-mi_connection: Optional[CommMonInj] = None
-
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 
@@ -902,15 +900,18 @@ async def set_ttl_level(control_info: TTLControlInfo):
 
 
 @app.post("/ttl/override/")
-async def set_ttl_override(value: bool):
-    """Turns on or off overriding of all TTL channels.
+async def set_ttl_override(control_info: TTLControlInfo):
+    """Turns on or off overriding of the given TTL channels.
 
     Args:
-        value: Whether to turn on overriding or not. 
+        control_info: Request body. See the fields section in TTLControlInfo.
     """
-    for device in configs["ttl_devices"]:
-        channel = device_db[device]["arguments"]["channel"]
-        mi_connection.inject(channel, TTLOverride.en.value, value)
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = MonInj.device_to_channel[device]
+        mi.connection.inject(channel, TTLOverride.en.value, value)
 
 
 @app.post("/dac/voltage/")
