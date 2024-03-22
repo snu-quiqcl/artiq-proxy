@@ -872,17 +872,6 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
-class TTLControlInfo(pydantic.BaseModel):
-    """TTL control information.
-    
-    Fields:
-        devices, values: List of TTL device name in the device DB and value to be modified,
-          repectively. The lengths of these lists should be identical. 
-    """
-    devices: list[str]
-    values: list[bool]
-
-
 @app.websocket("/ttl/status/modification/")
 async def get_ttl_status_modification(websocket: WebSocket):
     """Sends the modifications of TTL status whenever it is modified.
@@ -912,6 +901,17 @@ async def get_ttl_status_modification(websocket: WebSocket):
         logger.info("The connection for sending the modifications of TTL status is closed.")
     except websockets.exceptions.WebSocketException:
         logger.exception("Failed to send the modifications of TTL status.")
+
+
+class TTLControlInfo(pydantic.BaseModel):
+    """TTL control information.
+    
+    Fields:
+        devices, values: List of TTL device name in the device DB and value to be modified,
+          repectively. The lengths of these lists should be identical. 
+    """
+    devices: list[str]
+    values: list[bool]
 
 
 @app.post("/ttl/level/")
