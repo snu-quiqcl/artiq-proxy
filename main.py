@@ -294,7 +294,7 @@ async def lifespan(_app: FastAPI):
     _dataset_task = await init_dataset_tracker()
     await init_moninj()
     yield
-    await mi_connection.close()
+    await mi.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
