@@ -82,8 +82,8 @@ class MonInj:
 
     Modifications = dict[str, dict[str, bool]]
     ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
-    device_to_channel: dict[str, int]
-    channel_to_device: dict[int, str]
+    device_to_channel: dict[str, int] = {}
+    channel_to_device: dict[int, str] = {}
 
     def __init__(self):
         self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
@@ -276,6 +276,7 @@ async def init_dataset_tracker() -> asyncio.Task:
 
 async def init_moninj():
     """Initializes a MonInj object connecting to ARTIQ moninj proxy."""
+    MonInj.map_device_channel()
     global mi  # pylint: disable=global-statement
     mi = MonInj()
     await mi.connect()
