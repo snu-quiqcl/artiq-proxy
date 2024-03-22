@@ -183,7 +183,7 @@ class MonInj:
         self._notify_modified()
 
 
-mi: MonInj
+mi: Optional[MonInj] = None
 
 
 def load_configs():
