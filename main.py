@@ -1,7 +1,10 @@
+# pylint: disable=too-many-lines
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
 import asyncio
+import dataclasses
+import enum
 import glob
 import importlib.util
 import json
@@ -19,25 +22,169 @@ import h5py
 import numpy as np
 import pydantic
 import websockets
-from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
+from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
-import tracker as trck
 import dataset as dset
 import schedule as schd
+import tracker as trck
+from protocols import SortedQueue
 
 logger = logging.getLogger(__name__)
 
 configs = {}
 device_db = {}
 
-mi_connection: Optional[CommMonInj] = None
-
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
+
+class MonInj:
+    """Manages the connection to ARTIQ moninj proxy and TTL status.
+
+    Variables:
+        Modifications: Type of modifications.
+          It is a dictionary whose key is one of MonitorType values. Each value is a dictionary
+          whose key is a TTL channel number and value is the modified value.
+        ModificationQueue: SortedQueue for modifications of TTL status.
+        device_to_channel, channel_to_device:
+          Maps a TTL device name with its channel number, and vice versa.
+    
+    Attributes:
+        queue: SortedQueue with modified StatusType.
+        values: Dictionary whose keys are StatusType and values are modified values.
+        modified: Event set when any value is modified.
+    """
+
+    @enum.unique
+    class MonitorType(enum.Enum):
+        """Monitoring value type."""
+        PROBE = "probe"
+        LEVEL = "level"
+        OVERRIDE = "override"
+
+    @dataclasses.dataclass
+    class StatusType:
+        """Monitoring status type.
+        
+        Fields:
+            channel: Monitoring TTL channel number.
+            monitor_type: Monitoring value type.
+        """
+        channel: int
+        monitor_type: "MonInj.MonitorType"
+
+        def __hash__(self) -> int:
+            """Overridden."""
+            return hash(f"{str(self.channel)}_{self.monitor_type.value}")
+
+    Modifications = dict[str, dict[str, bool]]
+    ModificationQueue = SortedQueue[float, "MonInj.StatusType"]
+    device_to_channel: dict[str, int] = {}
+    channel_to_device: dict[int, str] = {}
+
+    def __init__(self):
+        self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
+        self.queue = MonInj.ModificationQueue()
+        self.values: dict[MonInj.StatusType, bool] = {}
+        self.modified = asyncio.Event()
+
+    @classmethod
+    def map_device_channel(cls):
+        """Maps TTL devices and channels."""
+        for device in configs["ttl_devices"]:
+            channel = device_db[device]["arguments"]["channel"]
+            cls.device_to_channel[device] = channel
+            cls.channel_to_device[channel] = device
+
+    async def connect(self):
+        """Connects to ARTIQ moninj proxy."""
+        await self.connection.connect(configs["core_addr"])
+        for device in configs["ttl_devices"]:
+            channel = MonInj.device_to_channel[device]
+            self.connection.monitor_probe(1, channel, TTLProbe.level.value)
+            self.connection.monitor_injection(1, channel, TTLOverride.level.value)
+            self.connection.monitor_injection(1, channel, TTLOverride.en.value)
+
+    def current_status(self, devices: list[str]) -> tuple[float, "MonInj.Modifications"]:
+        """Returns the current timestamp and status.
+        
+        Args:
+            devices: List of target TTL device names.
+        
+        Returns:
+            See Modifications in the variables section for detailed structure of the status.
+        """
+        modifications = {ty.value: {} for ty in MonInj.MonitorType}
+        for device in devices:
+            channel = MonInj.device_to_channel[device]
+            for ty in MonInj.MonitorType:
+                modifications[ty.value][device] = self.values[MonInj.StatusType(channel, ty)]
+        return time.time(), modifications
+
+    def modifications_since(
+        self, devices: list[str], timestamp: float
+    ) -> tuple[float, "MonInj.Modifications"]:
+        """Returns the latest timestamp and modifications since the given timestamp.
+        
+        Args:
+            devices: List of target TTL device names.
+            timestamp: Timestamp of the latest update.
+
+        Returns:
+            See Modifications in the variables section for detailed structure of the modifications.
+        """
+        modifications = {ty.value: {} for ty in MonInj.MonitorType}
+        latest, modification_types = self.queue.tail(timestamp)
+        filtered_modification_types = filter(
+            lambda ty: MonInj.channel_to_device[ty.channel] in devices, set(modification_types)
+        )
+        for ty in filtered_modification_types:
+            device = MonInj.channel_to_device[ty.channel]
+            modifications[ty.monitor_type.value][device] = self.values[ty]
+        return latest, modifications
+
+    def _notify_modified(self):
+        """Sets and clears the modified event for the queue."""
+        self.modified.set()
+        self.modified.clear()
+
+    def monitor_cb(self, channel: int, _ty: int, value: int):
+        """Callback function called when any monitoring value is modified.
+        
+        Args:
+            channel: TTL channel number.
+            _ty: Type of monitoring value. See artiq.coredevice.comm_moninj.TTLProbe.
+              It monitors only "TTLProbe.level", hence this is not used.
+            value: Modified monitoring value.
+        """
+        status_type = MonInj.StatusType(channel, MonInj.MonitorType.PROBE)
+        self.values[status_type] = bool(value)
+        self.queue.push(time.time(), status_type)
+        self._notify_modified()
+
+    def injection_status_cb(self, channel: int, ty: int, value: int):
+        """Callback function called when any injection status is modified.
+        
+        Args:
+            channel: TTL channel number.
+            ty: Type of injection status. See artiq.coredevice.comm_moninj.TTLOverride.
+            value: Modified injection status.
+        """
+        ty_to_monitor_type = {
+            TTLOverride.level.value: MonInj.MonitorType.LEVEL,
+            TTLOverride.en.value: MonInj.MonitorType.OVERRIDE
+        }
+        status_type = MonInj.StatusType(channel, ty_to_monitor_type[ty])
+        self.values[status_type] = bool(value)
+        self.queue.push(time.time(), status_type)
+        self._notify_modified()
+
+
+mi: Optional[MonInj] = None
+
 
 def load_configs():
     """Loads config information from the configuration file.
@@ -127,13 +274,12 @@ async def init_dataset_tracker() -> asyncio.Task:
     return await create_subscriber_task("datasets", dataset_tracker)
 
 
-async def connect_moninj():
-    """Creates a CommMonInj instance and connects it to ARTIQ."""
-    def do_nothing(*_):
-        """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement
-    mi_connection = CommMonInj(do_nothing, do_nothing)
-    await mi_connection.connect(configs["core_addr"])
+async def init_moninj():
+    """Initializes a MonInj object connecting to ARTIQ moninj proxy."""
+    MonInj.map_device_channel()
+    global mi  # pylint: disable=global-statement
+    mi = MonInj()
+    await mi.connect()
 
 
 @asynccontextmanager
@@ -146,9 +292,9 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await connect_moninj()
+    await init_moninj()
     yield
-    await mi_connection.close()
+    await mi.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -729,33 +875,78 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
-@app.post("/ttl/level/")
-async def set_ttl_level(device: str, value: bool):
-    """Sets the overriding value of the given TTL channel.
+@app.websocket("/ttl/status/modification/")
+async def get_ttl_status_modification(websocket: WebSocket):
+    """Sends the modifications of TTL status whenever it is modified.
     
-    This only sets a value to be output when overridden, but does not turn on overriding.
+    After accepted, it receives the target TTL list.
+    Then, it sends the current TTL status immediately.
+    Finally, it sends the modifications of TTL status everty time it is modified.
+
+    See Modifications in the variables section of MonInj for modifications structure.
 
     Args:
-        device: The TTL device name described in device_db.py.
-        value: The value to be output when overridden.
+        websocket: The web socket object.
     """
-    if device not in configs["ttl_devices"]:
-        logger.error("The TTL device %s is not defined in config.json.", device)
-        return
-    channel = device_db[device]["arguments"]["channel"]
-    mi_connection.inject(channel, TTLOverride.level.value, value)
+    await websocket.accept()
+    try:
+        devices = await websocket.receive_json()
+        latest, status = mi.current_status(devices)
+        await websocket.send_json(status)
+        while True:
+            latest, modifications = mi.modifications_since(devices, latest)
+            if not sum(len(m) for m in modifications.values()):  # no modification
+                await mi.modified.wait()
+                continue
+            await websocket.send_json(modifications)
+            await asyncio.sleep(0.5)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the modifications of TTL status is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the modifications of TTL status.")
+
+
+class TTLControlInfo(pydantic.BaseModel):
+    """TTL control information.
+    
+    Fields:
+        devices, values: List of TTL device name in the device DB and value to be modified,
+          repectively. The lengths of these lists should be identical. 
+    """
+    devices: list[str]
+    values: list[bool]
+
+
+@app.post("/ttl/level/")
+async def set_ttl_level(control_info: TTLControlInfo):
+    """Sets the overriding values of the given TTL channels.
+    
+    This only sets the value to be output when overridden, but does not turn on overriding.
+
+    Args:
+        control_info: Request body. See the fields section in TTLControlInfo.
+    """
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = MonInj.device_to_channel[device]
+        mi.connection.inject(channel, TTLOverride.level.value, value)
 
 
 @app.post("/ttl/override/")
-async def set_ttl_override(value: bool):
-    """Turns on or off overriding of all TTL channels.
+async def set_ttl_override(control_info: TTLControlInfo):
+    """Turns on or off overriding of the given TTL channels.
 
     Args:
-        value: Whether to turn on overriding or not. 
+        control_info: Request body. See the fields section in TTLControlInfo.
     """
-    for device in configs["ttl_devices"]:
-        channel = device_db[device]["arguments"]["channel"]
-        mi_connection.inject(channel, TTLOverride.en.value, value)
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = MonInj.device_to_channel[device]
+        mi.connection.inject(channel, TTLOverride.en.value, value)
 
 
 @app.post("/dac/voltage/")
