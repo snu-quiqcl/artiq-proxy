@@ -682,11 +682,13 @@ async def get_dataset_modification(websocket: WebSocket):
         _, units = dataset_tracker.get(f"{name}.units")
         await websocket.send_json(units)
         while True:
-            await dataset_tracker.modified[name].wait()
             latest, modifications = dataset_tracker.since(name, latest)
             if latest < 0:  # dataset is overwritten or removed
                 await websocket.send_json(None)
                 break
+            if not modifications:  # no modification:
+                await dataset_tracker.modified[name].wait()
+                continue
             await websocket.send_json(modifications)
             await asyncio.sleep(1)
     except websockets.exceptions.ConnectionClosedError:
