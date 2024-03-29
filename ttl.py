@@ -58,11 +58,6 @@ ModificationQueue = SortedQueue[float, StatusType]
 class TTLManager:
     """Manages the connection to ARTIQ moninj proxy and TTL status.
 
-    Variables:
-        Modifications: Type of modifications.
-          It is a dictionary whose key is one of MonitorType values. Each value is a dictionary
-          whose key is a TTL channel number and value is the modified value.
-    
     Attributes:
         connection: CommMonInj instance for connection to ARTIQ moninj proxy.
         queue: SortedQueue with modified StatusType.
