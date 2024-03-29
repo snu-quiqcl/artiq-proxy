@@ -3,8 +3,6 @@
 
 import ast
 import asyncio
-import dataclasses
-import enum
 import glob
 import importlib.util
 import json
@@ -22,7 +20,7 @@ import h5py
 import numpy as np
 import pydantic
 import websockets
-from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
+from artiq.coredevice.comm_moninj import TTLOverride
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
