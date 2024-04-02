@@ -33,7 +33,7 @@ class DeviceChannelMapping:
             channel: Target TTL channel number.
         """
         return self._channel_to_device[channel]
-    
+
     def channel(self, device: str) -> int:
         """Returns the TTL channel number corresponding the given TTL device name.
         
