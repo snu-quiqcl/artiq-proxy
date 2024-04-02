@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 device_db = {}
-ttl_device_channel_mapping: Optional[ttl.DeviceChannelMapping] = None
+ttl_device_channel_mapping: ttl.DeviceChannelMapping
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
