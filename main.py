@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 configs = {}
 device_db = {}
+ttl_device_channel_mapping: Optional[ttl.DeviceChannelMapping] = None
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
@@ -133,9 +134,9 @@ async def init_ttl_manager():
     
     This should be called after loading config.
     """
-    ttl.map_device_channel(configs["ttl_devices"], device_db)
-    global ttl_manager  # pylint: disable=global-statement
-    ttl_manager = ttl.TTLManager()
+    global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
+    ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
+    ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
     await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
 
 
@@ -785,7 +786,7 @@ async def set_ttl_level(control_info: TTLControlInfo):
         if device not in configs["ttl_devices"]:
             logger.error("The TTL device %s is not defined in config.json.", device)
             continue
-        channel = ttl.device_to_channel[device]
+        channel = ttl_device_channel_mapping.channel(device)
         ttl_manager.connection.inject(channel, TTLOverride.level.value, value)
 
 
@@ -800,7 +801,7 @@ async def set_ttl_override(control_info: TTLControlInfo):
         if device not in configs["ttl_devices"]:
             logger.error("The TTL device %s is not defined in config.json.", device)
             continue
-        channel = ttl.device_to_channel[device]
+        channel = ttl_device_channel_mapping.channel(device)
         ttl_manager.connection.inject(channel, TTLOverride.en.value, value)
 
 
