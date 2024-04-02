@@ -11,12 +11,7 @@ from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
 from protocols import SortedQueue
 
 class DeviceChannelMapping:
-    """Maps TTL devices and channels.
-    
-    Attributes:
-        device_to_channel, channel_to_device: Dictionary whose key is a TTL device name and value
-          is the corresponding TTL channel number, vice versa.
-    """
+    """Maps TTL devices and channels."""
 
     def __init__(self, ttl_devices: list[str], device_db: dict[str, Any]):
         """
@@ -24,12 +19,28 @@ class DeviceChannelMapping:
             ttl_devices: See main.configs.
             device_db: See main.device_db.
         """
-        self.device_to_channel = {}
-        self.channel_to_device = {}
+        self._device_to_channel = {}
+        self._channel_to_device = {}
         for device in ttl_devices:
             channel = device_db[device]["arguments"]["channel"]
-            self.device_to_channel[device] = channel
-            self.channel_to_device[channel] = device
+            self._device_to_channel[device] = channel
+            self._channel_to_device[channel] = device
+
+    def device(self, channel: int) -> str:
+        """Returns the TTL device name corresponding the given TTL channel number.
+        
+        Args:
+            channel: Target TTL channel number.
+        """
+        return self._channel_to_device[channel]
+    
+    def channel(self, device: str) -> int:
+        """Returns the TTL channel number corresponding the given TTL device name.
+        
+        Args:
+            device: Target TTL device name.
+        """
+        return self._device_to_channel[device]
 
 
 @enum.unique
