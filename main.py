@@ -751,7 +751,7 @@ async def get_ttl_status_modification(websocket: WebSocket):
         await websocket.send_json(status)
         while True:
             latest, modifications = ttl_manager.modifications_since(devices, latest)
-            if not sum(len(m) for m in modifications.values()):  # no modification
+            if not any(modifications.values()):  # no modification
                 await ttl_manager.modified.wait()
                 continue
             await websocket.send_json(modifications)
