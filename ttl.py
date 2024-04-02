@@ -82,7 +82,12 @@ class TTLManager:
         modified: Event set when any value is modified.
     """
 
-    def __init__(self):
+    def __init__(self, device_channel_mapping: DeviceChannelMapping):
+        """
+        Args:
+            device_channel_mapping: Provides the mapping of TTL devices and channels.
+        """
+        self._device_channel_mapping = device_channel_mapping
         self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.queue = ModificationQueue()
         self.values: dict[StatusType, bool] = {}
@@ -96,7 +101,7 @@ class TTLManager:
         """
         await self.connection.connect(core_addr)
         for device in ttl_devices:
-            channel = device_to_channel[device]
+            channel = self._device_channel_mapping.channel(device)
             self.connection.monitor_probe(1, channel, TTLProbe.level.value)
             self.connection.monitor_injection(1, channel, TTLOverride.level.value)
             self.connection.monitor_injection(1, channel, TTLOverride.en.value)
@@ -109,7 +114,7 @@ class TTLManager:
         """
         modifications = {ty.value: {} for ty in MonitorType}
         for device in devices:
-            channel = device_to_channel[device]
+            channel = self._device_channel_mapping.channel(device)
             for ty in MonitorType:
                 modifications[ty.value][device] = self.values[StatusType(channel, ty)]
         return time.time(), modifications
@@ -125,11 +130,10 @@ class TTLManager:
         """
         modifications = {ty.value: {} for ty in MonitorType}
         latest, modification_types = self.queue.tail(timestamp)
-        filtered_modification_types = filter(
-            lambda ty: channel_to_device[ty.channel] in devices, set(modification_types)
-        )
-        for ty in filtered_modification_types:
-            device = channel_to_device[ty.channel]
+        for ty in set(modification_types):
+            device = self._device_channel_mapping.device(ty.channel)
+            if device not in devices:
+                continue
             modifications[ty.monitor_type.value][device] = self.values[ty]
         return latest, modifications
 
