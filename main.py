@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Proxy server to communicate a client to ARTIQ."""
 
 import ast
@@ -19,25 +20,26 @@ import h5py
 import numpy as np
 import pydantic
 import websockets
-from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride
+from artiq.coredevice.comm_moninj import TTLOverride
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
-import tracker as trck
 import dataset as dset
 import schedule as schd
+import tracker as trck
+import ttl
 
 logger = logging.getLogger(__name__)
 
 configs = {}
 device_db = {}
-
-mi_connection: Optional[CommMonInj] = None
+ttl_device_channel_mapping: ttl.DeviceChannelMapping
 
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
+ttl_manager: Optional[ttl.TTLManager] = None
 
 def load_configs():
     """Loads config information from the configuration file.
@@ -127,13 +129,15 @@ async def init_dataset_tracker() -> asyncio.Task:
     return await create_subscriber_task("datasets", dataset_tracker)
 
 
-async def connect_moninj():
-    """Creates a CommMonInj instance and connects it to ARTIQ."""
-    def do_nothing(*_):
-        """Gets any input, but doesn't do anything."""
-    global mi_connection  # pylint: disable=global-statement
-    mi_connection = CommMonInj(do_nothing, do_nothing)
-    await mi_connection.connect(configs["core_addr"])
+async def init_ttl_manager():
+    """Initializes the TTL manager connecting to ARTIQ moninj proxy.
+    
+    This should be called after loading config.
+    """
+    global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
+    ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
+    ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
+    await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
 
 
 @asynccontextmanager
@@ -146,9 +150,9 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await connect_moninj()
+    await init_ttl_manager()
     yield
-    await mi_connection.close()
+    await ttl_manager.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -730,33 +734,78 @@ async def get_result(rid: str, result_file_type: ResultFileType) -> FileResponse
     return FileResponse(full_result_path)
 
 
-@app.post("/ttl/level/")
-async def set_ttl_level(device: str, value: bool):
-    """Sets the overriding value of the given TTL channel.
+@app.websocket("/ttl/status/modification/")
+async def get_ttl_status_modification(websocket: WebSocket):
+    """Sends the modifications of TTL status whenever it is modified.
     
-    This only sets a value to be output when overridden, but does not turn on overriding.
+    After accepted, it receives the target TTL list.
+    Then, it sends the current TTL status immediately.
+    Finally, it sends the modifications of TTL status everty time it is modified.
+
+    See Modifications in the variables section of MonInj for modifications structure.
 
     Args:
-        device: The TTL device name described in device_db.py.
-        value: The value to be output when overridden.
+        websocket: The web socket object.
     """
-    if device not in configs["ttl_devices"]:
-        logger.error("The TTL device %s is not defined in config.json.", device)
-        return
-    channel = device_db[device]["arguments"]["channel"]
-    mi_connection.inject(channel, TTLOverride.level.value, value)
+    await websocket.accept()
+    try:
+        devices = await websocket.receive_json()
+        latest, status = ttl_manager.current_status(devices)
+        await websocket.send_json(status)
+        while True:
+            latest, modifications = ttl_manager.modifications_since(devices, latest)
+            if not any(modifications.values()):  # no modification
+                await ttl_manager.modified.wait()
+                continue
+            await websocket.send_json(modifications)
+            await asyncio.sleep(0.5)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.info("The connection for sending the modifications of TTL status is closed.")
+    except websockets.exceptions.WebSocketException:
+        logger.exception("Failed to send the modifications of TTL status.")
+
+
+class TTLControlInfo(pydantic.BaseModel):
+    """TTL control information.
+    
+    Fields:
+        devices, values: List of TTL device name in the device DB and value to be modified,
+          repectively. The lengths of these lists should be identical. 
+    """
+    devices: list[str]
+    values: list[bool]
+
+
+@app.post("/ttl/level/")
+async def set_ttl_level(control_info: TTLControlInfo):
+    """Sets the overriding values of the given TTL channels.
+    
+    This only sets the value to be output when overridden, but does not turn on overriding.
+
+    Args:
+        control_info: Request body. See the fields section in TTLControlInfo.
+    """
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = ttl_device_channel_mapping.channel(device)
+        ttl_manager.connection.inject(channel, TTLOverride.level.value, value)
 
 
 @app.post("/ttl/override/")
-async def set_ttl_override(value: bool):
-    """Turns on or off overriding of all TTL channels.
+async def set_ttl_override(control_info: TTLControlInfo):
+    """Turns on or off overriding of the given TTL channels.
 
     Args:
-        value: Whether to turn on overriding or not. 
+        control_info: Request body. See the fields section in TTLControlInfo.
     """
-    for device in configs["ttl_devices"]:
-        channel = device_db[device]["arguments"]["channel"]
-        mi_connection.inject(channel, TTLOverride.en.value, value)
+    for device, value in zip(control_info.devices, control_info.values):
+        if device not in configs["ttl_devices"]:
+            logger.error("The TTL device %s is not defined in config.json.", device)
+            continue
+        channel = ttl_device_channel_mapping.channel(device)
+        ttl_manager.connection.inject(channel, TTLOverride.en.value, value)
 
 
 @app.post("/dac/voltage/")
