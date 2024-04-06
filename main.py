@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 """Proxy server to communicate a client to ARTIQ."""
 
-import ast
 import asyncio
 import glob
 import importlib.util
@@ -9,11 +8,9 @@ import json
 import logging
 import os
 import posixpath
-import shutil
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
-from enum import Enum
 from typing import Any, Optional, Union
 
 import h5py
@@ -22,7 +19,6 @@ import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
 from fastapi import FastAPI, WebSocket
-from fastapi.responses import FileResponse
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
