@@ -19,15 +19,8 @@ jobs:
         sudo apt-get update
         python -m pip install --upgrade pip
         pip install coverage
-    - name: Add dependencies about external libraries
-      run: |
-        pip install h5py
-        pip install fastapi
-        pip install websockets
+        pip install -r requirements.txt
         pip install httpx
-        pip install numpy
-        pip install git+https://github.com/m-labs/sipyco.git
-        pip install git+https://github.com/m-labs/artiq.git
     - name: Run the unit tests and check coverage
       run: |
         xvfb-run `which coverage` run -m unittest test.py
