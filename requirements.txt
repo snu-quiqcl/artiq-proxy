@@ -1,4 +1,3 @@
-fastapi==0.110.*
-websockets==12.*
+fastapi[all]==0.110.*
 git+https://github.com/m-labs/artiq.git@7.0
 git+https://github.com/m-labs/sipyco.git@v1.6
