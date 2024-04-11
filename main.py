@@ -19,6 +19,7 @@ import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
 from fastapi import FastAPI, WebSocket
+from pydantic_settings import BaseSettings
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
 
@@ -36,6 +37,13 @@ ttl_device_channel_mapping: ttl.DeviceChannelMapping
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 ttl_manager: Optional[ttl.TTLManager] = None
+
+class Setting(BaseSettings):
+    config_path: str = "config.json"
+
+
+setting = Setting()
+
 
 def load_configs():
     """Loads config information from the configuration file.
@@ -66,7 +74,7 @@ def load_configs():
         }
       }
     """
-    with open("config.json", encoding="utf-8") as config_file:
+    with open(setting.config_path, encoding="utf-8") as config_file:
         configs.update(json.load(config_file))
 
 
