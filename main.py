@@ -38,7 +38,8 @@ dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 ttl_manager: Optional[ttl.TTLManager] = None
 
-class Setting(BaseSettings):
+class Setting(BaseSettings):  # pylint: disable=too-few-public-methods
+    """Setting to specify the target config file path."""
     config_path: str = "config.json"
 
 
