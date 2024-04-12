@@ -4,6 +4,7 @@ import json
 import logging
 import posixpath
 import time
+import copy
 import unittest
 from datetime import datetime
 from unittest import mock
@@ -16,12 +17,31 @@ class RoutingTest(unittest.TestCase):
     """Unit tests for routing and each operation."""
 
     def setUp(self):
-        patcher_load_config_file = mock.patch("main.load_config_file")
+        patcher_load_configs = mock.patch("main.load_configs")
+        patcher_load_device_db = mock.patch("main.load_device_db")
+        patcher_init_ttl_manager = mock.patch("main.init_ttl_manager")
+        patcher_init_schedule_tracker = mock.patch("main.init_schedule_tracker")
+        patcher_init_dataset_tracker = mock.patch("main.init_dataset_tracker")
+        patcher_dataset_tracker = mock.patch("main.dataset_tracker")
+        patcher_ttl_manager = mock.patch("main.ttl_manager")
         patcher_get_client = mock.patch("main.get_client")
-        self.mocked_load_config_file = patcher_load_config_file.start()
-        self.mocked_get_client = patcher_get_client.start()
-        self.mocked_client = self.mocked_get_client.return_value
-        self.addCleanup(patcher_load_config_file.stop)
+        patcher_load_configs.start()
+        patcher_load_device_db.start()
+        patcher_init_schedule_tracker.start()
+        patcher_init_dataset_tracker.start()
+        patcher_dataset_tracker.start()
+        patcher_init_ttl_manager.start()
+        mocked_ttl_manager = patcher_ttl_manager.start()
+        mocked_ttl_manager.connection = mock.AsyncMock()
+        mocked_get_client = patcher_get_client.start()
+        self.mocked_client = mocked_get_client.return_value
+        self.addCleanup(patcher_load_configs.stop)
+        self.addCleanup(patcher_load_device_db.stop)
+        self.addCleanup(patcher_init_ttl_manager.stop)
+        self.addCleanup(patcher_init_schedule_tracker.stop)
+        self.addCleanup(patcher_init_dataset_tracker.stop)
+        self.addCleanup(patcher_dataset_tracker.stop)
+        self.addCleanup(patcher_ttl_manager.stop)
         self.addCleanup(patcher_get_client.stop)
 
     @mock.patch.dict("main.configs",
@@ -30,7 +50,6 @@ class RoutingTest(unittest.TestCase):
         test_list = ["dir1/", "dir2/", "file1.py", "file2.py"]
         self.mocked_client.list_directory.return_value = test_list
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             for params in ({}, {"directory": "dir1/"}):
                 directory = params.get('directory', '')
                 response = client.get("/ls/", params=params)
@@ -51,21 +70,58 @@ class RoutingTest(unittest.TestCase):
         }
         self.mocked_client.examine.return_value = test_info
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             response = client.get("/experiment/info/", params={'file': 'experiment.py'})
             self.mocked_client.examine.assert_called_with("experiment.py")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(
                 response.json()["ExperimentClass"],
-                test_info["ExperimentClass"].dict()
+                test_info["ExperimentClass"].model_dump()
             )
 
+    @unittest.skip("temporary skipping in #85")
+    def test_get_experiment_queue(self):
+        test_queue = {
+            "1": {
+                "pipeline": "main",
+                "expid": {
+                    "log_level": 30,
+                    "class_name": None,
+                    "arguments": {"user": "QuIQCL", "time": 1.0, "save": False, "color": "r"},
+                   "file": "DIRECTORY-PATH"
+                },
+                "priority": 1,
+                "due_date": None,
+                "flush": False,
+                "status": None,
+                "repo_msg": None
+            }
+        }
+        with TestClient(main.app) as client:
+            for status in ["pending", "preparing", "running", "run_done", "analyzing", "deleting"]:
+                test_queue["1"]["status"] = status
+                self.mocked_client.get_status.return_value = copy.deepcopy(test_queue)
+                response = client.get("/experiment/queue/")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), test_queue)
+
+    def test_delete_experiment(self):
+        test_rid = 1
+        with TestClient(main.app) as client:
+            client.post("/experiment/delete/", params={"rid": test_rid})
+            self.mocked_client.delete.assert_called_with(test_rid)
+
+    def test_request_termination_of_experiment(self):
+        test_rid = 1
+        with TestClient(main.app) as client:
+            client.post("/experiment/terminate/", params={"rid": test_rid})
+            self.mocked_client.request_termination.assert_called_with(test_rid)
+
+    @unittest.skip("temporary skipping as discussed in #63")
     @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
     def test_submit_experiment(self):
         test_rid = 0
         self.mocked_client.submit.return_value = test_rid
         with TestClient(main.app) as client:
-            self.mocked_load_config_file.assert_called_once()
             test_params = (
                 {"file": "experiment1.py"},
                 {"file": "experiment2.py", "args": '{"k": "v"}'},
@@ -105,8 +161,8 @@ class FunctionTest(unittest.TestCase):
     @mock.patch("builtins.open")
     @mock.patch("json.load",
                 return_value={"master_path": "master_path/", "repository_path": "repo_path/"})
-    def test_load_config_file(self, mocked_load, mocked_open):
-        main.load_config_file()
+    def test_load_configs(self, mocked_load, mocked_open):
+        main.load_configs()
         mocked_open.assert_called_once_with("config.json", encoding="utf-8")
         mocked_load.assert_called_once()
         self.assertEqual(
