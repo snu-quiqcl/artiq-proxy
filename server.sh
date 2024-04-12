@@ -16,8 +16,12 @@ do
     esac
 done
 
+host="0.0.0.0"
+port=8000
+cmd="python -m uvicorn main:app --host $host --port $port"
+
 if [ -z "$config_path" ]; then
-    python -m uvicorn main:app --host 0.0.0.0 --port 8000
+    $cmd
 else
-    CONFIG_PATH=$config_path python -m uvicorn main:app --host 0.0.0.0 --port 8000
+    CONFIG_PATH=$config_path $cmd
 fi
