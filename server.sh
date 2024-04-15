@@ -18,7 +18,7 @@ done
 
 host="0.0.0.0"
 port=8000
-cmd="python -m uvicorn main:app --host $host --port $port"
+cmd="python -m uvicorn main:app --host $host --port $port --loop asyncio"
 
 if [ -z "$config_path" ]; then
     $cmd
