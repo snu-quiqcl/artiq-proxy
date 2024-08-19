@@ -1,0 +1,22 @@
+{
+    "master_path": "C:/Jeonghyun/SNU_GIT/RFSoC/lolenc/examples/skeleton_code/",
+    "repository_path": "",
+    "result_path": "results/",
+    "device_db_path": "/frontend/configuration_window.json",
+    "core_addr": "172.22.22.236",
+    "master_addr": "127.0.0.3",
+    "notify_port": 3250,
+    "ttl_devices": [
+        "ttl4", "ttl5", "ttl6", "ttl7", "ttl8", "ttl9", "ttl10", "ttl11", "ttl12", "ttl13",
+        "ttl14", "ttl15", "ttl16", "ttl17", "ttl18", "ttl19", "ttl20", "ttl21", "ttl22", "ttl23",
+        "led0", "led1"
+    ],
+    "dac_devices": {
+        "zotino0": [0, 1, 2, 3, 4, 5, 6, 7]
+    },
+    "dds_devices": {
+        "urukul0": [0, 1, 2, 3]
+    },
+    "dataset_tracker": {},
+    "control_system" : "lolenc"
+}

@@ -11,7 +11,7 @@ import posixpath
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Literal
 
 import h5py
 import numpy as np
@@ -83,10 +83,15 @@ def load_device_db():
     """Loads device DB from the device DB file."""
     device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
     module_name = "device_db"
-    spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    device_db.update(module.device_db)
+    if configs["control_system"] == "lolenc":
+        pass
+    elif configs["control_system"] == "artiq":
+        spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        device_db.update(module.device_db)
+    else:
+        logging.critical("Control system is not defined.")
 
 
 async def run_subscriber(subscriber: Subscriber):
@@ -133,17 +138,20 @@ async def init_dataset_tracker() -> asyncio.Task:
     dataset_tracker = dset.DatasetTracker(maxlen)
     return await create_subscriber_task("datasets", dataset_tracker)
 
-
 async def init_ttl_manager():
     """Initializes the TTL manager connecting to ARTIQ moninj proxy.
     
     This should be called after loading config.
     """
-    global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
-    ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
-    ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
-    await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
-
+    if configs["control_system"] == "lolenc":
+        return
+    elif configs["control_system"] == "artiq":
+        global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
+        ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
+        ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
+        await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
+    else:
+        logging.critical("Control system is not defined.")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -157,7 +165,12 @@ async def lifespan(_app: FastAPI):
     _dataset_task = await init_dataset_tracker()
     await init_ttl_manager()
     yield
-    await ttl_manager.connection.close()
+    if configs["control_system"] == "lolenc":
+        pass
+    elif configs["control_system"] == "artiq":
+        await ttl_manager.connection.close()
+    else:
+        logging.critical("Control system is not defined.")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -180,10 +193,12 @@ async def list_directory(directory: str = "") -> list[str]:
     remote = get_client("master_experiment_db")
     full_path = posixpath.join(configs["master_path"], configs["repository_path"], directory)
     item_list = remote.list_directory(full_path)
-    return sorted(
+    return_list =  sorted(
         item_list,
         key=lambda item: (not item.endswith("/"), item)
     )
+    print(return_list)
+    return return_list
 
 
 class ExperimentInfo(pydantic.BaseModel):
