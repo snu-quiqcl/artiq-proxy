@@ -1,30 +1,59 @@
 """Module for TTL status management."""
 
+# pylint: disable=import-error, no-name-in-module
 import asyncio
 import dataclasses
 import enum
 import time
 from typing import Any
+from pprint import pprint
 
 from artiq.coredevice.comm_moninj import CommMonInj, TTLOverride, TTLProbe
+from lolenc.device.moninj import LolencCommMonInj
 
 from protocols import SortedQueue
 
 class DeviceChannelMapping:
     """Maps TTL devices and channels."""
+    control_system = "artiq"
 
     def __init__(self, ttl_devices: list[str], device_db: dict[str, Any]):
         """
+
+        When control_system is "artiq":
+            channel = TTL Channel Number
+
+        When control_system is "lolenc":
+            channel = TTL_Controller AXI Channel|(TTL Device Index << 6)
+
         Args:
             ttl_devices: See main.configs.
             device_db: See main.device_db.
         """
         self._device_to_channel = {}
         self._channel_to_device = {}
-        for device in ttl_devices:
-            channel = device_db[device]["arguments"]["channel"]
-            self._device_to_channel[device] = channel
-            self._channel_to_device[channel] = device
+        if self.control_system == "artiq":
+            for device in ttl_devices:
+                channel = device_db[device]["arguments"]["channel"]
+                self._device_to_channel[device] = channel
+                self._channel_to_device[channel] = device
+        else:
+            device_db_ttl_ctrl = [
+                device for device in device_db
+                if device_db[device]["class"] == "TTL_Controller"
+            ]
+
+            print("TTL Controller List : ")
+            print(device_db_ttl_ctrl)
+
+            for ttl_controller in device_db_ttl_ctrl:
+                for i, ttl_dev in enumerate(device_db[ttl_controller]["arguments"]["ttl_device"]):
+                    channel = device_db[ttl_controller]["arguments"]["channel"] | (i << 6)
+                    self._device_to_channel[ttl_dev] = channel
+                    self._channel_to_device[channel] = ttl_dev
+
+            print("Device to Channel List : ")
+            pprint(self._device_to_channel)
 
     def device(self, channel: int) -> str:
         """Returns the TTL device name corresponding the given TTL channel number.
@@ -82,13 +111,21 @@ class TTLManager:
         modified: Event set when any value is modified.
     """
 
-    def __init__(self, device_channel_mapping: DeviceChannelMapping):
+    def __init__(
+            self,
+            device_channel_mapping: DeviceChannelMapping,
+            control_system : str = "artiq"
+        ):
         """
         Args:
             device_channel_mapping: Provides the mapping of TTL devices and channels.
         """
         self._device_channel_mapping = device_channel_mapping
-        self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
+        self._control_system = control_system
+        if control_system == "lolenc":
+            self.connection = LolencCommMonInj(self.monitor_cb, self.injection_status_cb)
+        else:
+            self.connection = CommMonInj(self.monitor_cb, self.injection_status_cb)
         self.queue = ModificationQueue()
         self.values: dict[StatusType, bool] = {}
         self.modified = asyncio.Event()

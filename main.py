@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 """Proxy server to communicate a client to ARTIQ."""
 
+# pylint: disable=unused-import, import-error
 import asyncio
 import glob
 import importlib.util
@@ -84,7 +85,9 @@ def load_device_db():
     device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
     module_name = "device_db"
     if configs["control_system"] == "lolenc":
-        pass
+        setattr(ttl.DeviceChannelMapping, "control_system", "lolenc")
+        with open(device_db_full_path, "r", encoding="utf-8") as device_db_file:
+            device_db.update(json.load(device_db_file))
     elif configs["control_system"] == "artiq":
         spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
         module = importlib.util.module_from_spec(spec)
@@ -143,15 +146,14 @@ async def init_ttl_manager():
     
     This should be called after loading config.
     """
-    if configs["control_system"] == "lolenc":
-        return
-    elif configs["control_system"] == "artiq":
-        global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
-        ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
-        ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
-        await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
-    else:
-        logging.critical("Control system is not defined.")
+
+    global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
+    ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
+    ttl_manager = ttl.TTLManager(
+        ttl_device_channel_mapping, 
+        control_system = configs["control_system"]
+    )
+    await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -166,7 +168,7 @@ async def lifespan(_app: FastAPI):
     await init_ttl_manager()
     yield
     if configs["control_system"] == "lolenc":
-        pass
+        await ttl_manager.connection.close()
     elif configs["control_system"] == "artiq":
         await ttl_manager.connection.close()
     else:
