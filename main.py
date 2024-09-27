@@ -150,7 +150,7 @@ async def init_ttl_manager():
     global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
     ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
     ttl_manager = ttl.TTLManager(
-        ttl_device_channel_mapping, 
+        ttl_device_channel_mapping,
         control_system = configs["control_system"]
     )
     await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
@@ -199,9 +199,33 @@ async def list_directory(directory: str = "") -> list[str]:
         item_list,
         key=lambda item: (not item.endswith("/"), item)
     )
-    print(return_list)
     return return_list
 
+@app.get("/ls_config/")
+async def list_config_directory(directory: str = "") -> list[str]:
+    """Gets the list of elements in the given path and returns it.
+
+    The "master_path" and "repository_path" in the configuration file 
+    is used for the prefix of the path.
+
+    Args:
+        directory: The path of the directory to search for.
+
+    Returns:
+        A list with items in the given directory.
+        It lists directories before files, sorted in an alphabetical order.
+    """
+    remote = get_client("master_schedule")
+    current_config_file = remote.get_configuration()
+    config_dir = os.path.dirname(current_config_file)
+
+    remote = get_client("master_experiment_db")
+    item_list = remote.list_directory(config_dir)
+    return_list =  sorted(
+        item_list,
+        key=lambda item: (not item.endswith("/"), item)
+    )
+    return return_list
 
 class ExperimentInfo(pydantic.BaseModel):
     """Experiment information.
@@ -216,6 +240,22 @@ class ExperimentInfo(pydantic.BaseModel):
     """
     name: str
     arginfo: dict[str, Any]
+
+class ConfigurationInfo(pydantic.BaseModel):
+    """lolenc Configuartion Information."""
+    common_path: str
+    ip: str
+    port: str
+    xilinx_include_path: str
+    bsp_src_path: str
+    bsp_include_path: str
+    bsp_lib_path: str
+    startup_path: str
+    linker_path: str
+    compile_driver: str
+    device_config: str
+    device_db: str
+    log_path: str
 
 
 @app.get("/experiment/info/", response_model=dict[str, ExperimentInfo])
@@ -232,6 +272,58 @@ async def get_experiment_info(file: str) -> Any:
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
+@app.get("/configuration/info/", response_model=dict[str, ConfigurationInfo])
+async def get_configuration_info(file: str) -> Any:
+    """Gets configuration of current lolenc system
+    
+    Args:
+        file: The path of the experiment file.
+
+    Returns:
+        A dictionary containing only one element of which key is the experiment class name.
+        The value is an ExperimentInfo object.
+    """
+    remote = get_client("master_schedule")
+    current_config_file = remote.get_configuration()
+    config_dir = os.path.dirname(current_config_file)
+    config_name = os.path.basename(current_config_file)
+    with open(os.path.join(config_dir, file), "r", encoding="utf-8") as file:
+        try:
+            json_data = json.load(file)
+            return {config_name: json_data}
+        except json.JSONDecodeError:
+            logger.error("JSON Decode Error")
+            return {}
+@app.get("/configuration/submit/")
+async def submit_configuration(  # pylint: disable=too-many-arguments
+    file: str,
+    cls: Optional[str] = None,
+    args: str = "{}",
+) -> None:
+    """Submits the given experiment file.
+    
+    Args:
+        file: The path of the experiment file.
+        cls: The class name of the experiment to be submitted.
+        args: The arguments to submit which must be a JSON string of a dictionary.
+          Each key is an argument name and its value is the value of the argument.
+        pipeline: The pipeline to run the experiment in.
+        priority: Higher value means sooner scheduling.
+        timed: The due date for the experiment in ISO format.
+          None for no due date.
+    
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+    """
+    args_dict = json.loads(args)
+    remote = get_client("master_schedule")
+    current_config_file = remote.get_configuration()
+    config_dir = os.path.dirname(current_config_file)
+    file_path = os.path.join(config_dir,file)
+    print(os.path.join(config_dir,file))
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(args_dict, file, ensure_ascii=False, indent=4)
+    remote.set_configuration(file_path)
 
 @app.websocket("/schedule/")
 async def get_schedule(websocket: WebSocket):
