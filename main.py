@@ -162,15 +162,20 @@ async def lifespan(_app: FastAPI):
     This function is set as the lifespan of the application.
     """
     load_configs()
-    load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await init_ttl_manager()
+
+    if configs["control_system"] != "qumare": 
+        load_device_db()
+        await init_ttl_manager()
+    
     yield
     if configs["control_system"] == "lolenc":
         await ttl_manager.connection.close()
     elif configs["control_system"] == "artiq":
         await ttl_manager.connection.close()
+    elif configs["control_system"] == "qumare":
+        pass
     else:
         logging.critical("Control system is not defined.")
 
@@ -242,19 +247,11 @@ class ExperimentInfo(pydantic.BaseModel):
     arginfo: dict[str, Any]
 
 class ConfigurationInfo(pydantic.BaseModel):
-    """lolenc Configuartion Information."""
+    """Configuartion Information for QuMaRE system."""
     common_path: str
     ip: str
     port: str
-    xilinx_include_path: str
-    bsp_src_path: str
-    bsp_include_path: str
-    bsp_lib_path: str
-    startup_path: str
-    linker_path: str
-    compile_driver: str
-    device_config: str
-    device_db: str
+    exp_file_path: str
     log_path: str
 
 
