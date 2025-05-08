@@ -18,7 +18,7 @@ import numpy as np
 import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 from pydantic_settings import BaseSettings
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -264,7 +264,8 @@ async def request_termination_of_experiment(rid: int):
 
 @app.get("/experiment/submit/")
 async def submit_experiment(  # pylint: disable=too-many-arguments
-    file: str,
+    file: Optional[str] = None,
+    raw_cpp: Optional[str] = None,
     cls: Optional[str] = None,
     args: str = "{}",
     pipeline: str = "main",
@@ -286,17 +287,37 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
-    submission_file_path = posixpath.join(configs["repository_path"], file)
-    args_dict = json.loads(args)
-    expid = {
-        "log_level": logging.WARNING,
-        "class_name": cls,
-        "arguments": args_dict,
-        "file": submission_file_path
-    }
+
+    if (file is None) == (raw_cpp is None):
+        raise HTTPException(
+            status_code=400,
+            detail="Specify exactly one of 'file' or 'raw_cpp'."
+        )
+    
+    if file is not None:
+        # Experiment file path submission via IQUIP
+        submission_file_path = posixpath.join(configs["repository_path"], file)
+        args_dict = json.loads(args)
+        expid = {
+            "log_level": logging.WARNING,
+            "class_name": cls,
+            "arguments": args_dict,
+            "file": submission_file_path
+        }
+        
+    else:
+        # Raw cpp code submission via the control server
+        expid = {
+            "log_level": logging.WARNING,
+            "raw_code": raw_cpp,
+            "class_name": cls,
+            "arguments": None
+        }
+        
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
+
     return rid
 
 
