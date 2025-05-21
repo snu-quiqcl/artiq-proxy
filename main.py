@@ -19,7 +19,7 @@ import numpy as np
 import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException, WebSocketDisconnect
 from pydantic_settings import BaseSettings
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -165,7 +165,7 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    await init_ttl_manager()
+    # await init_ttl_manager()
     yield
     if configs["control_system"] == "lolenc":
         await ttl_manager.connection.close()
@@ -373,7 +373,8 @@ async def request_termination_of_experiment(rid: int):
 
 @app.get("/experiment/submit/")
 async def submit_experiment(  # pylint: disable=too-many-arguments
-    file: str,
+    file: Optional[str] = None,
+    raw_cpp: Optional[str] = None,
     cls: Optional[str] = None,
     args: str = "{}",
     pipeline: str = "main",
@@ -384,6 +385,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     
     Args:
         file: The path of the experiment file.
+        raw_cpp: The raw cpp code to be submitted.
         cls: The class name of the experiment to be submitted.
         args: The arguments to submit which must be a JSON string of a dictionary.
           Each key is an argument name and its value is the value of the argument.
@@ -395,14 +397,31 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
-    submission_file_path = posixpath.join(configs["repository_path"], file)
-    args_dict = json.loads(args)
-    expid = {
-        "log_level": logging.WARNING,
-        "class_name": cls,
-        "arguments": args_dict,
-        "file": submission_file_path
-    }
+
+    if (file is None) == (raw_cpp is None):
+        raise HTTPException(
+            status_code=400,
+            detail="Specify exactly one of 'file' or 'raw_cpp'."
+        )
+    
+    if file is not None:
+        submission_file_path = posixpath.join(configs["repository_path"], file)
+        args_dict = json.loads(args)
+        expid = {
+            "log_level": logging.WARNING,
+            "class_name": cls,
+            "arguments": args_dict,
+            "file": submission_file_path
+        }
+    else:
+        # Raw cpp code submission via the control server
+        expid = {
+            "log_level": logging.WARNING,
+            "raw_code": raw_cpp,
+            "class_name": cls,
+            "arguments": None
+        }
+
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
@@ -843,3 +862,74 @@ def get_client(target_name: str) -> rpc.Client:
           For details, see main() in artiq.frontend.artiq_client.
     """
     return rpc.Client("::1", 3251, target_name)
+
+########################################################################################
+# APIs for the control server to monitor the experiment status
+########################################################################################
+
+def is_experiment_complete(rid: int) -> bool:
+    """Checks if an experiment with given RID is complete.
+    
+    Args:
+        rid: The run identifier value of the experiment.
+    
+    Returns:
+        True if the experiment is complete (finished, error, or cancelled), False otherwise.
+    """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    
+    # If RID not in status, it means the experiment is complete
+    if rid not in status:
+        return True
+        
+    # Get experiment status
+    exp_status = status[rid].get("status", None)
+    
+    # Status that indicate the experiment is still running
+    running_states = [
+    # TODO: Check for the status tracking of the experiment
+        "pending",      # Waiting to start
+        "preparing",    # Setting up
+        "prepare_done", # Ready to run
+        "running",      # Currently running
+        "paused"       # Temporarily paused
+    ]
+    
+    return exp_status not in running_states
+
+
+@app.websocket("/experiment/watch/{rid}")
+async def watch_experiment(websocket: WebSocket, rid: int):
+    """Watch experiment until completion.
+    
+    Maintains WebSocket connection while experiment is running.
+    Closes connection when experiment completes.
+    Client should then use the existing /dataset/rid/ endpoint
+    to retrieve the data.
+    
+    Args:
+        websocket: The WebSocket connection
+        rid: Run identifier of the experiment
+    """
+    await websocket.accept()
+    try:
+        # Keep connection open while experiment is running
+        while not is_experiment_complete(rid):
+            await asyncio.sleep(0.1)
+        
+        # Get the list of available datasets for this RID
+        dataset_list = await list_dataset_from_rid(rid)
+        
+        # Send completion message with available datasets
+        await websocket.send_json({
+            "status": "complete",
+            "datasets": dataset_list
+        })
+        await websocket.close()
+        
+    except WebSocketDisconnect:
+        logger.info(f"Client disconnected from experiment watcher for RID: {rid}")
+    except Exception as e:
+        logger.exception(f"Error in experiment watcher for RID: {rid}")
+        await websocket.close()
