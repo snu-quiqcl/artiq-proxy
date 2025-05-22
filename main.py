@@ -2,6 +2,7 @@
 """Proxy server to communicate a client to ARTIQ."""
 
 # pylint: disable=unused-import, import-error
+# pylint: disable=unused-import, import-error
 import asyncio
 import glob
 import importlib.util
@@ -42,6 +43,7 @@ ttl_manager: Optional[ttl.TTLManager] = None
 class Setting(BaseSettings):  # pylint: disable=too-few-public-methods
     """Setting to specify the target config file path."""
     config_path: str = "config.json"
+    receiver_url: str = "http://localhost:8000"  # Default receiver server URL
 
 
 setting = Setting()
@@ -425,6 +427,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
     remote = get_client("master_schedule")
     rid = remote.submit(pipeline, expid, priority, due_date, False)
+
     return rid
 
 
@@ -559,7 +562,7 @@ async def get_dataset_modification(websocket: WebSocket):
 
     After accepted, it receives the target dataset name and the period fetching the dataset.
     Then, it sends the current dataset, parameters, and units immediately.
-    Finally, it sends the dataset modificiation at least a second apart, every time it is modified.
+    Finally, it sends the dataset modificiation at least a second apart.
 
     For details about dataset modificiation, see dataset.DatasetTracker.since().
 
@@ -581,7 +584,7 @@ async def get_dataset_modification(websocket: WebSocket):
             if latest < 0:  # dataset is overwritten or removed
                 await websocket.send_json(None)
                 break
-            if not modifications:  # no modification:
+            if not modifications:  # no modification
                 await dataset_tracker.modified[name].wait()
                 continue
             await websocket.send_json(modifications)
@@ -862,6 +865,74 @@ def get_client(target_name: str) -> rpc.Client:
           For details, see main() in artiq.frontend.artiq_client.
     """
     return rpc.Client("::1", 3251, target_name)
+
+
+def is_experiment_complete(rid: int) -> bool:
+    """Checks if an experiment with given RID is complete.
+    
+    Args:
+        rid: The run identifier value of the experiment.
+    
+    Returns:
+        True if the experiment is complete (finished, error, or cancelled), False otherwise.
+    """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    
+    # If RID not in status, it means the experiment is complete
+    if rid not in status:
+        return True
+        
+    # Get experiment status
+    exp_status = status[rid].get("status", None)
+    
+    # Status that indicate the experiment is still running
+    running_states = [
+    # TODO: Check for the status tracking of the experiment
+        "pending",      # Waiting to start
+        "preparing",    # Setting up
+        "prepare_done", # Ready to run
+        "running",      # Currently running
+        "paused"       # Temporarily paused
+    ]
+    
+    return exp_status not in running_states
+
+
+@app.websocket("/experiment/watch/{rid}")
+async def watch_experiment(websocket: WebSocket, rid: int):
+    """Watch experiment until completion.
+    
+    Maintains WebSocket connection while experiment is running.
+    Closes connection when experiment completes.
+    Client should then use the existing /dataset/rid/ endpoint
+    to retrieve the data.
+    
+    Args:
+        websocket: The WebSocket connection
+        rid: Run identifier of the experiment
+    """
+    await websocket.accept()
+    try:
+        # Keep connection open while experiment is running
+        while not is_experiment_complete(rid):
+            await asyncio.sleep(0.1)
+        
+        # Get the list of available datasets for this RID
+        dataset_list = await list_dataset_from_rid(rid)
+        
+        # Send completion message with available datasets
+        await websocket.send_json({
+            "status": "complete",
+            "datasets": dataset_list
+        })
+        await websocket.close()
+        
+    except WebSocketDisconnect:
+        logger.info(f"Client disconnected from experiment watcher for RID: {rid}")
+    except Exception as e:
+        logger.exception(f"Error in experiment watcher for RID: {rid}")
+        await websocket.close()
 
 ########################################################################################
 # APIs for the control server to monitor the experiment status
