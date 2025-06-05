@@ -39,7 +39,7 @@ schedule_tracker: Optional[schd.ScheduleTracker] = None
 ttl_manager: Optional[ttl.TTLManager] = None
 
 import threading
-system_mode = "user"
+system_mode = "service"
 system_mode_lock = threading.Lock()
 
 class Setting(BaseSettings):  # pylint: disable=too-few-public-methods
@@ -887,21 +887,21 @@ async def watch_experiment(websocket: WebSocket, rid: int):
 
 
 ########################################################################################
-# APIs for getting and setting system mode between 'user' and 'experiment'
+# APIs for getting and setting system mode between 'service' and 'experiment'
 ########################################################################################
 
 @app.get("/system_mode/")
 async def get_system_mode():
-    """Get the current system mode ('user' or 'experiment')."""
+    """Get the current system mode ('service' or 'experiment')."""
     with system_mode_lock:
         return {"system_mode": system_mode}
 
 
 @app.post("/system_mode/")
 async def set_system_mode(mode: str = Body(..., embed=True)):
-    """Set the system mode to 'user' or 'experiment'."""
-    if mode not in ("user", "experiment"):
-        return {"error": "Invalid mode. Must be 'user' or 'experiment'."}
+    """Set the system mode to 'service' or 'experiment'."""
+    if mode not in ("service", "experiment"):
+        return {"error": "Invalid mode. Must be 'service' or 'experiment'."}
     with system_mode_lock:
         global system_mode
         system_mode = mode
