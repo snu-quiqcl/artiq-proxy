@@ -18,7 +18,7 @@ import numpy as np
 import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, WebSocket, HTTPException, Body
 from pydantic_settings import BaseSettings
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -37,6 +37,10 @@ ttl_device_channel_mapping: ttl.DeviceChannelMapping
 dataset_tracker: Optional[dset.DatasetTracker] = None
 schedule_tracker: Optional[schd.ScheduleTracker] = None
 ttl_manager: Optional[ttl.TTLManager] = None
+
+import threading
+system_mode = "user"
+system_mode_lock = threading.Lock()
 
 class Setting(BaseSettings):  # pylint: disable=too-few-public-methods
     """Setting to specify the target config file path."""
@@ -215,6 +219,58 @@ async def get_experiment_info(file: str) -> Any:
     remote = get_client("master_experiment_db")
     return remote.examine(file)
 
+@app.get("/configuration/info/", response_model=dict[str, ConfigurationInfo])
+async def get_configuration_info(file: str) -> Any:
+    """Gets configuration of current lolenc system
+    
+    Args:
+        file: The path of the experiment file.
+
+    Returns:
+        A dictionary containing only one element of which key is the experiment class name.
+        The value is an ExperimentInfo object.
+    """
+    remote = get_client("master_schedule")
+    current_config_file = remote.get_configuration()
+    config_dir = os.path.dirname(current_config_file)
+    config_name = os.path.basename(current_config_file)
+    with open(os.path.join(config_dir, file), "r", encoding="utf-8") as file:
+        try:
+            json_data = json.load(file)
+            return {config_name: json_data}
+        except json.JSONDecodeError:
+            logger.error("JSON Decode Error")
+            return {}
+@app.get("/configuration/submit/")
+async def submit_configuration(  # pylint: disable=too-many-arguments
+    file: str,
+    cls: Optional[str] = None,
+    args: str = "{}",
+) -> None:
+    """Submits the given experiment file.
+    
+    Args:
+        file: The path of the experiment file.
+        cls: The class name of the experiment to be submitted.
+        args: The arguments to submit which must be a JSON string of a dictionary.
+          Each key is an argument name and its value is the value of the argument.
+        pipeline: The pipeline to run the experiment in.
+        priority: Higher value means sooner scheduling.
+        timed: The due date for the experiment in ISO format.
+          None for no due date.
+    
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+    """
+    args_dict = json.loads(args)
+    remote = get_client("master_schedule")
+    current_config_file = remote.get_configuration()
+    config_dir = os.path.dirname(current_config_file)
+    file_path = os.path.join(config_dir,file)
+    print(os.path.join(config_dir,file))
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(args_dict, file, ensure_ascii=False, indent=4)
+    remote.set_configuration(file_path)
 
 @app.websocket("/schedule/")
 async def get_schedule(websocket: WebSocket):
@@ -755,3 +811,98 @@ def get_client(target_name: str) -> rpc.Client:
           For details, see main() in artiq.frontend.artiq_client.
     """
     return rpc.Client("::1", 3251, target_name)
+
+
+
+########################################################################################
+# APIs for the control server to monitor the experiment status
+########################################################################################
+
+def is_experiment_complete(rid: int) -> bool:
+    """Checks if an experiment with given RID is complete.
+    
+    Args:
+        rid: The run identifier value of the experiment.
+    
+    Returns:
+        True if the experiment is complete (finished, error, or cancelled), False otherwise.
+    """
+    remote = get_client("master_schedule")
+    status = remote.get_status()
+    
+    # If RID not in status, it means the experiment is complete
+    if rid not in status:
+        return True
+        
+    # Get experiment status
+    exp_status = status[rid].get("status", None)
+    
+    # Status that indicate the experiment is still running
+    running_states = [
+    # TODO: Check for the status tracking of the experiment
+        "pending",      # Waiting to start
+        "preparing",    # Setting up
+        "prepare_done", # Ready to run
+        "running",      # Currently running
+        "paused"       # Temporarily paused
+    ]
+    
+    return exp_status not in running_states
+
+
+@app.websocket("/experiment/watch/{rid}")
+async def watch_experiment(websocket: WebSocket, rid: int):
+    """Watch experiment until completion.
+    
+    Maintains WebSocket connection while experiment is running.
+    Closes connection when experiment completes.
+    Client should then use the existing /dataset/rid/ endpoint
+    to retrieve the data.
+    
+    Args:
+        websocket: The WebSocket connection
+        rid: Run identifier of the experiment
+    """
+    await websocket.accept()
+    try:
+        # Keep connection open while experiment is running
+        while not is_experiment_complete(rid):
+            await asyncio.sleep(0.1)
+        
+        # Get the list of available datasets for this RID
+        dataset_list = await list_dataset_from_rid(rid)
+        
+        # Send completion message with available datasets
+        await websocket.send_json({
+            "status": "complete",
+            "datasets": dataset_list
+        })
+        await websocket.close()
+        
+    except WebSocketDisconnect:
+        logger.info(f"Client disconnected from experiment watcher for RID: {rid}")
+    except Exception as e:
+        logger.exception(f"Error in experiment watcher for RID: {rid}")
+        await websocket.close()
+
+
+########################################################################################
+# APIs for getting and setting system mode between 'user' and 'experiment'
+########################################################################################
+
+@app.get("/system_mode/")
+async def get_system_mode():
+    """Get the current system mode ('user' or 'experiment')."""
+    with system_mode_lock:
+        return {"system_mode": system_mode}
+
+
+@app.post("/system_mode/")
+async def set_system_mode(mode: str = Body(..., embed=True)):
+    """Set the system mode to 'user' or 'experiment'."""
+    if mode not in ("user", "experiment"):
+        return {"error": "Invalid mode. Must be 'user' or 'experiment'."}
+    with system_mode_lock:
+        global system_mode
+        system_mode = mode
+    return {"system_mode": system_mode}
