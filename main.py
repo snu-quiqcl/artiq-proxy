@@ -56,21 +56,9 @@ def load_configs():
         "master_path": {master_path},
         "repository_path": {repository_path},
         "result_path": {result_path},
-        "device_db_path": {device_db_path},
         "core_addr": {core_ip},
         "master_addr": {artiq_master_ip},
         "nofity_port": {nofity_port},
-        "ttl_devices": [{ttl_device0}, {ttl_device1}, ... ],
-        "dac_devices": {
-            {dac_device0}: [{dac_device0_channel0}, {dac_device0_channel1}, ... ],
-            {dac_device1}: [{dac_device1_channel0}, {dac_device1_channel1}, ... ],
-            ...
-        },
-        "dds_devices": {
-            {dds_device0}: [{dds_device0_channel0}, {dds_device0_channel1}, ... ],
-            {dds_device1}: [{dds_device1_channel0}, {dds_device1_channel1}, ... ],
-            ...
-        },
         "dataset_tracker": {
             "maxlen": {maxlen}
         }
@@ -78,23 +66,6 @@ def load_configs():
     """
     with open(setting.config_path, encoding="utf-8") as config_file:
         configs.update(json.load(config_file))
-
-
-def load_device_db():
-    """Loads device DB from the device DB file."""
-    device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
-    module_name = "device_db"
-    if configs["control_system"] == "lolenc":
-        setattr(ttl.DeviceChannelMapping, "control_system", "lolenc")
-        with open(device_db_full_path, "r", encoding="utf-8") as device_db_file:
-            device_db.update(json.load(device_db_file))
-    elif configs["control_system"] == "artiq":
-        spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        device_db.update(module.device_db)
-    else:
-        logging.critical("Control system is not defined.")
 
 
 async def run_subscriber(subscriber: Subscriber):
@@ -117,7 +88,8 @@ async def create_subscriber_task(notifier_name: str, tracker: trck.Tracker) -> a
         sipyco.sync_struct.Subscriber.__init__().
     """
     subscriber = Subscriber(notifier_name, tracker.target_builder, tracker.notify_callback)
-    await subscriber.connect(configs["master_addr"], configs["notify_port"])
+    host, port = configs["master_addr"].split(":")
+    await subscriber.connect(host, int(port))
     return asyncio.create_task(run_subscriber(subscriber))
 
 
@@ -141,20 +113,6 @@ async def init_dataset_tracker() -> asyncio.Task:
     dataset_tracker = dset.DatasetTracker(maxlen)
     return await create_subscriber_task("datasets", dataset_tracker)
 
-async def init_ttl_manager():
-    """Initializes the TTL manager connecting to ARTIQ moninj proxy.
-    
-    This should be called after loading config.
-    """
-
-    global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
-    ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
-    ttl_manager = ttl.TTLManager(
-        ttl_device_channel_mapping,
-        control_system = configs["control_system"]
-    )
-    await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Lifespan events.
@@ -164,10 +122,6 @@ async def lifespan(_app: FastAPI):
     load_configs()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-
-    if configs["control_system"] != "qumare": 
-        load_device_db()
-        await init_ttl_manager()
     
     yield
     if configs["control_system"] == "lolenc":
@@ -568,261 +522,6 @@ async def get_dataset_modification(websocket: WebSocket):
         logger.info("The connection for sending the dataset modification is closed.")
     except websockets.exceptions.WebSocketException:
         logger.exception("Failed to send the dataset modification.")
-
-
-@app.websocket("/ttl/status/modification/")
-async def get_ttl_status_modification(websocket: WebSocket):
-    """Sends the modifications of TTL status whenever it is modified.
-    
-    After accepted, it receives the target TTL list.
-    Then, it sends the current TTL status immediately.
-    Finally, it sends the modifications of TTL status everty time it is modified.
-
-    See Modifications in the variables section of MonInj for modifications structure.
-
-    Args:
-        websocket: The web socket object.
-    """
-    await websocket.accept()
-    try:
-        devices = await websocket.receive_json()
-        latest, status = ttl_manager.current_status(devices)
-        await websocket.send_json(status)
-        while True:
-            latest, modifications = ttl_manager.modifications_since(devices, latest)
-            if not any(modifications.values()):  # no modification
-                await ttl_manager.modified.wait()
-                continue
-            await websocket.send_json(modifications)
-            await asyncio.sleep(0.5)
-    except websockets.exceptions.ConnectionClosedError:
-        logger.info("The connection for sending the modifications of TTL status is closed.")
-    except websockets.exceptions.WebSocketException:
-        logger.exception("Failed to send the modifications of TTL status.")
-
-
-class TTLControlInfo(pydantic.BaseModel):
-    """TTL control information.
-    
-    Fields:
-        devices, values: List of TTL device name in the device DB and value to be modified,
-          repectively. The lengths of these lists should be identical. 
-    """
-    devices: list[str]
-    values: list[bool]
-
-
-@app.post("/ttl/level/")
-async def set_ttl_level(control_info: TTLControlInfo):
-    """Sets the overriding values of the given TTL channels.
-    
-    This only sets the value to be output when overridden, but does not turn on overriding.
-
-    Args:
-        control_info: Request body. See the fields section in TTLControlInfo.
-    """
-    for device, value in zip(control_info.devices, control_info.values):
-        if device not in configs["ttl_devices"]:
-            logger.error("The TTL device %s is not defined in config.json.", device)
-            continue
-        channel = ttl_device_channel_mapping.channel(device)
-        ttl_manager.connection.inject(channel, TTLOverride.level.value, value)
-
-
-@app.post("/ttl/override/")
-async def set_ttl_override(control_info: TTLControlInfo):
-    """Turns on or off overriding of the given TTL channels.
-
-    Args:
-        control_info: Request body. See the fields section in TTLControlInfo.
-    """
-    for device, value in zip(control_info.devices, control_info.values):
-        if device not in configs["ttl_devices"]:
-            logger.error("The TTL device %s is not defined in config.json.", device)
-            continue
-        channel = ttl_device_channel_mapping.channel(device)
-        ttl_manager.connection.inject(channel, TTLOverride.en.value, value)
-
-
-@app.post("/dac/voltage/")
-async def set_dac_voltage(device: str, channel: int, value: float):
-    """Sets the voltage of the given DAC channel.
-    
-    Args:
-        device: The DAC device name described in device_db.py.
-        channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
-        value: The voltage to set. For Zotino, the valid range is from -10V to +10V.
-    """
-    if device not in configs["dac_devices"] or channel not in configs["dac_devices"][device]:
-        logger.error("The DAC device %s CH %d is not defined in config.json.", device, channel)
-        return
-    class_name = "SetDACVoltage"
-    content = f"""
-from artiq.experiment import *
-
-class {class_name}(EnvExperiment):
-    def build(self):
-        self.setattr_device("core")
-        self.dac = self.get_device("{device}")
-
-    @kernel
-    def run(self):
-        self.core.reset()
-        self.dac.init()
-        delay(200*us)
-        self.dac.set_dac([{value}], [{channel}])
-"""
-    expid = {
-        "log_level": logging.WARNING,
-        "content": content,
-        "class_name": class_name,
-        "arguments": {},
-    }
-    remote = get_client("master_schedule")
-    rid = remote.submit("main", expid, 0, None, False)
-    return rid
-
-
-@app.post("/dds/profile/")
-async def set_dds_profile(
-    device: str,
-    channel: int,
-    frequency: float,
-    amplitude: float,
-    phase: float,
-    switching: bool
-):  # pylint: disable=too-many-arguments
-    """Sets the default profile of the given DDS channel.
-    
-    Args:
-        device: The DDS device name described in device_db.py.
-        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
-        frequency: The frequency to set. For Urukul, the valid range is from 1HHz to 400MHz.
-        amplitude: The amplitude to set. For Urukul, the valid range is from 0 to 1.
-        phase: The phase to set. For Urukul, the valid range is from 0 to 1.
-        switching: If True, the current profile is switched to the default profile.
-    """
-    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
-        return
-    class_name = "SetDDSProfile"
-    profile_switching_code = "self.dds.cpld.set_profile(7)"
-    content = f"""
-from artiq.experiment import *
-
-class {class_name}(EnvExperiment):
-    def build(self):
-        self.setattr_device("core")
-        self.dds = self.get_device("{device}_ch{channel}")
-
-    @kernel
-    def run(self):
-        self.core.reset()
-        self.dds.cpld.init()
-        self.dds.init()
-        self.dds.set(frequency={frequency}, amplitude={amplitude}, phase={phase})
-        {profile_switching_code if switching else ""}
-"""
-    expid = {
-        "log_level": logging.WARNING,
-        "content": content,
-        "class_name": class_name,
-        "arguments": {},
-    }
-    remote = get_client("master_schedule")
-    rid = remote.submit("main", expid, 0, None, False)
-    return rid
-
-
-@app.post("/dds/att/")
-async def set_dds_attenuation(device: str, channel: int, value: float) -> int:
-    """Sets the attenuation of the given DDS channel.
-
-    Args:
-        device: The DDS device name described in device_db.py.
-        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
-        value: The attenuation to set. For Urukul, the valid range is from 0dB to -31.5dB.
-          The value is the absolute value of the actual attenuation, e.g., 10 for -10dB.
-
-    Returns:
-        The run identifier, an integer which is incremented at each experiment submission.
-        If there is an error, it returns -1.
-    """
-    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
-        return -1
-    class_name = "SetDDSAttenuation"
-    content = f"""
-from artiq.experiment import *
-
-class {class_name}(EnvExperiment):
-    def build(self):
-        self.setattr_device("core")
-        self.dds = self.get_device("{device}_ch{channel}")
-
-    @kernel
-    def run(self):
-        self.core.reset()
-        self.dds.cpld.init()
-        self.dds.init()
-        self.dds.set_att({value})
-"""
-    expid = {
-        "log_level": logging.WARNING,
-        "content": content,
-        "class_name": class_name,
-        "arguments": {},
-    }
-    remote = get_client("master_schedule")
-    rid = remote.submit("main", expid, 0, None, False)
-    return rid
-
-
-@app.post("/dds/switch/")
-async def set_dds_switch(device: str, channel: int, on: bool) -> int:
-    """Turns on and off the TTL switch, which controls the given DDS channel.
-    
-    Args:
-        device: The DDS device name described in device_db.py.
-        channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
-        on: If True, this turns on the TTL switch. Otherwise, this turns off it.
-
-    Returns:
-        The run identifier, an integer which is incremented at each experiment submission.
-        If there is an error, it returns -1.
-    """
-    if device not in configs["dds_devices"] or channel not in configs["dds_devices"][device]:
-        logger.error("The DDS device %s CH %d is not defined in config.json.", device, channel)
-        return -1
-    class_name = "SetDDSSwitch"
-    if on:
-        setting_switch_code = "self.dds.sw.on()"
-    else:
-        setting_switch_code = "self.dds.sw.off()"
-    content = f"""
-from artiq.experiment import *
-
-class {class_name}(EnvExperiment):
-    def build(self):
-        self.setattr_device("core")
-        self.dds = self.get_device("{device}_ch{channel}")
-
-    @kernel
-    def run(self):
-        self.core.reset()
-        self.dds.cpld.init()
-        self.dds.init()
-        {setting_switch_code}
-"""
-    expid = {
-        "log_level": logging.WARNING,
-        "content": content,
-        "class_name": class_name,
-        "arguments": {},
-    }
-    remote = get_client("master_schedule")
-    rid = remote.submit("main", expid, 0, None, False)
-    return rid
 
 
 def get_client(target_name: str) -> rpc.Client:
