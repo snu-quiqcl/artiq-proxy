@@ -1,0 +1,17 @@
+{
+    "master_path": "/home/quiqcl/artiq/",
+    "repository_path": "repository/",
+    "result_path": "results/",
+    "device_db_path": "device_db.py",
+    "core_addr": "192.168.1.75",
+    "master_addr": "localhost",
+    "notify_port": 3250,
+    "ttl_devices": ["ttl0", "ttl1", "ttl2", "ttl3"],
+    "dac_devices": {
+        "zotino0": [0, 1, 2, 3]
+    },
+    "dds_devices": {
+        "urukul0": [0, 1, 2, 3]
+    },
+    "dataset_tracker": {}
+}

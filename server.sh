@@ -1,6 +1,6 @@
 #!/bin/bash
 
-config_path="/home/server/Desktop/Codes/ent/artiq-proxy/config.json"
+config_path=""
 
 helpFunction()
 {
@@ -16,7 +16,7 @@ do
     esac
 done
 
-host="127.0.0.1"
+host="0.0.0.0"
 port=8000
 cmd="python -m uvicorn main:app --host $host --port $port --loop asyncio"
 
