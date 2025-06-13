@@ -1,43 +1,11 @@
-{
-    "master_path": "C:/Jeonghyun/lolenc_repo",
-    "repository_path": "",
-    "result_path": "results",
-    "device_db_path": "device_db.json",
-    "core_addr": "172.22.22.236",
-    "master_addr": "127.0.0.3",
-    "notify_port": 3250,
-    "ttl_devices": [
-        "jb_0",
-        "jb_1",
-        "jb_2",
-        "jb_3",
-        "jb_4",
-        "jb_5",
-        "jb_6",
-        "jb_7",
-        "jc_0",
-        "jc_1",
-        "jc_2",
-        "jc_3",
-        "jc_4",
-        "jc_5",
-        "jc_6",
-        "jc_7",
-        "jd_0",
-        "jd_1",
-        "jd_2",
-        "jd_3",
-        "jd_4",
-        "jd_5",
-        "jd_6",
-        "jd_7"
-    ],
-    "dac_devices": {
-        "zotino0": [0, 1, 2, 3, 4, 5, 6, 7]
-    },
-    "dds_devices": {
-        "urukul0": [0, 1, 2, 3]
-    },
-    "dataset_tracker": {},
-    "control_system" : "lolenc"
+{ 
+    "master_path": "/home/server/Desktop/Codes/ent/qumare",
+    "control_system": "qumare", 
+    "repository_path": "", 
+    "result_path": "results/", 
+    "core_addr": "192.168.1.75", 
+    "master_addr": "127.0.0.1",
+    "port": 3251,
+    "notify_port": 3250, 
+    "dataset_tracker": {} 
 }
