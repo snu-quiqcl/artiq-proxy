@@ -1,11 +1,14 @@
 { 
-    "master_path": "/home/server/Desktop/Codes/ent/qumare",
-    "control_system": "qumare", 
+    "master_path": "C:/Users/USER/Desktop/Codes/qumare_repo",
     "repository_path": "", 
-    "result_path": "results/", 
-    "core_addr": "192.168.1.75", 
-    "master_addr": "127.0.0.1",
-    "port": 3251,
+    "result_path": "results", 
+    "device_db_path": "device_db.json", 
+    "core_addr": "172.22.22.236", 
+    "master_addr": "127.0.0.1", 
     "notify_port": 3250, 
-    "dataset_tracker": {} 
+    "ttl_devices": [ ], 
+    "dac_devices": { }, 
+    "dds_devices": { }, 
+    "dataset_tracker": {}, 
+    "control_system" : "qumare" 
 }
