@@ -264,6 +264,17 @@ class ConfigurationInfo(pydantic.BaseModel):
     log_path: str
 
 
+class ExperimentSubmission(pydantic.BaseModel):
+    """Experiment submission payload."""
+    file: Optional[str] = None
+    raw_cpp: Optional[str] = None
+    cls: Optional[str] = None
+    args: str = "{}"
+    pipeline: str = "main"
+    priority: int = 0
+    timed: Optional[str] = None
+
+
 @app.get("/experiment/info/", response_model=dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
     """Gets information of the given experiment file and returns it.
@@ -429,16 +440,8 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
-@app.get("/experiment/submit/")
-async def submit_experiment(  # pylint: disable=too-many-arguments
-    file: Optional[str] = None,
-    raw_cpp: Optional[str] = None,
-    cls: Optional[str] = None,
-    args: str = "{}",
-    pipeline: str = "main",
-    priority: int = 0,
-    timed: Optional[str] = None,
-) -> int:
+@app.post("/experiment/submit/")
+async def submit_experiment(submission: ExperimentSubmission) -> int:
     """Submits the given experiment file.
     
     Args:
@@ -455,6 +458,14 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+
+    file = submission.file
+    raw_cpp = submission.raw_cpp
+    cls = submission.cls
+    args = submission.args
+    pipeline = submission.pipeline
+    priority = submission.priority
+    timed = submission.timed
 
     if (file is None) == (raw_cpp is None):
         raise HTTPException(

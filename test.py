@@ -130,7 +130,7 @@ class RoutingTest(unittest.TestCase):
                 {"file": "experiment3.py", "pipeline": "2023-06-26T10:00:00"},
             )
             for params in test_params:
-                response = client.get("/experiment/submit/", params=params)
+                response = client.post("/experiment/submit/", json=params)
                 file = posixpath.join("repo_path", params["file"])
                 args = json.loads(params.get("args", "{}"))
                 pipeline = params.get("pipeline", "main")
