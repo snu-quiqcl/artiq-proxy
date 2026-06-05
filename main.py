@@ -90,10 +90,17 @@ def load_device_db():
     """Loads device DB from the device DB file."""
     device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
     module_name = "device_db"
-    spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    device_db.update(module.device_db)
+    if configs["control_system"] == "lolenc":
+        setattr(ttl.DeviceChannelMapping, "control_system", "lolenc")
+        with open(device_db_full_path, "r", encoding="utf-8") as device_db_file:
+            device_db.update(json.load(device_db_file))
+    elif configs["control_system"] == "artiq":
+        spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        device_db.update(module.device_db)
+    else:
+        logging.critical("Control system is not defined.")
 
 
 async def run_subscriber(subscriber: Subscriber):
@@ -147,7 +154,10 @@ async def init_ttl_manager():
     """
     global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
     ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
-    ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
+    ttl_manager = ttl.TTLManager(
+        ttl_device_channel_mapping,
+        control_system = configs["control_system"]
+    )
     await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
 
 @asynccontextmanager
@@ -162,7 +172,12 @@ async def lifespan(_app: FastAPI):
     _dataset_task = await init_dataset_tracker()
     await init_ttl_manager()
     yield
-    await ttl_manager.connection.close()
+    if configs["control_system"] == "lolenc":
+        await ttl_manager.connection.close()
+    elif configs["control_system"] == "artiq":
+        await ttl_manager.connection.close()
+    else:
+        logging.critical("Control system is not defined.")
 
 
 app = FastAPI(lifespan=lifespan)
