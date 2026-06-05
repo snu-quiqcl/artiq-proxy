@@ -20,7 +20,7 @@ import numpy as np
 import pydantic
 import websockets
 from artiq.coredevice.comm_moninj import TTLOverride
-from fastapi import FastAPI, WebSocket, HTTPException, Body
+from fastapi import FastAPI, WebSocket, HTTPException, Body, WebSocketDisconnect
 from pydantic_settings import BaseSettings
 from sipyco import pc_rpc as rpc
 from sipyco.sync_struct import Subscriber
@@ -90,17 +90,10 @@ def load_device_db():
     """Loads device DB from the device DB file."""
     device_db_full_path = posixpath.join(configs["master_path"], configs["device_db_path"])
     module_name = "device_db"
-    if configs["control_system"] == "lolenc":
-        setattr(ttl.DeviceChannelMapping, "control_system", "lolenc")
-        with open(device_db_full_path, "r", encoding="utf-8") as device_db_file:
-            device_db.update(json.load(device_db_file))
-    elif configs["control_system"] == "artiq":
-        spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        device_db.update(module.device_db)
-    else:
-        logging.critical("Control system is not defined.")
+    spec = importlib.util.spec_from_file_location(module_name, device_db_full_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    device_db.update(module.device_db)
 
 
 async def run_subscriber(subscriber: Subscriber):
@@ -152,13 +145,9 @@ async def init_ttl_manager():
     
     This should be called after loading config.
     """
-
     global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
     ttl_device_channel_mapping = ttl.DeviceChannelMapping(configs["ttl_devices"], device_db)
-    ttl_manager = ttl.TTLManager(
-        ttl_device_channel_mapping,
-        control_system = configs["control_system"]
-    )
+    ttl_manager = ttl.TTLManager(ttl_device_channel_mapping)
     await ttl_manager.connect(configs["core_addr"], configs["ttl_devices"])
 
 @asynccontextmanager
@@ -171,14 +160,9 @@ async def lifespan(_app: FastAPI):
     load_device_db()
     _schedule_task = await init_schedule_tracker()
     _dataset_task = await init_dataset_tracker()
-    # await init_ttl_manager()
+    await init_ttl_manager()
     yield
-    if configs["control_system"] == "lolenc":
-        await ttl_manager.connection.close()
-    elif configs["control_system"] == "artiq":
-        await ttl_manager.connection.close()
-    else:
-        logging.critical("Control system is not defined.")
+    await ttl_manager.connection.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -201,11 +185,10 @@ async def list_directory(directory: str = "") -> list[str]:
     remote = get_client("master_experiment_db")
     full_path = posixpath.join(configs["master_path"], configs["repository_path"], directory)
     item_list = remote.list_directory(full_path)
-    return_list =  sorted(
+    return sorted(
         item_list,
         key=lambda item: (not item.endswith("/"), item)
     )
-    return return_list
 
 @app.get("/ls_config/")
 async def list_config_directory(directory: str = "") -> list[str]:
@@ -440,8 +423,84 @@ async def request_termination_of_experiment(rid: int):
     remote.request_termination(rid)
 
 
+def _submit_experiment_to_schedule(
+    file: Optional[str],
+    raw_cpp: Optional[str],
+    cls: Optional[str],
+    args: str,
+    pipeline: str,
+    priority: int,
+    timed: Optional[str],
+) -> int:
+    """Build an ARTIQ expid and submit it to the scheduler."""
+    if (file is None) == (raw_cpp is None):
+        raise HTTPException(
+            status_code=400,
+            detail="Specify exactly one of 'file' or 'raw_cpp'."
+        )
+
+    if file is not None:
+        submission_file_path = posixpath.join(configs["repository_path"], file)
+        args_dict = json.loads(args)
+        expid = {
+            "log_level": logging.WARNING,
+            "class_name": cls,
+            "arguments": args_dict,
+            "file": submission_file_path
+        }
+    else:
+        expid = {
+            "log_level": logging.WARNING,
+            "raw_code": raw_cpp,
+            "class_name": cls,
+            "arguments": None
+        }
+
+    due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
+    remote = get_client("master_schedule")
+    return remote.submit(pipeline, expid, priority, due_date, False)
+
+
+@app.get("/experiment/submit/")
+async def submit_experiment(  # pylint: disable=too-many-arguments
+    file: str,
+    cls: Optional[str] = None,
+    args: str = "{}",
+    pipeline: str = "main",
+    priority: int = 0,
+    timed: Optional[str] = None,
+) -> int:
+    """Submits the given experiment file.
+    
+    Args:
+        file: The path of the experiment file.
+        cls: The class name of the experiment to be submitted.
+        args: The arguments to submit which must be a JSON string of a dictionary.
+          Each key is an argument name and its value is the value of the argument.
+        pipeline: The pipeline to run the experiment in.
+        priority: Higher value means sooner scheduling.
+        timed: The due date for the experiment in ISO format.
+          None for no due date.
+    
+    Returns:
+        The run identifier, an integer which is incremented at each experiment submission.
+    """
+    submission_file_path = posixpath.join(configs["repository_path"], file)
+    args_dict = json.loads(args)
+    expid = {
+        "log_level": logging.WARNING,
+        "class_name": cls,
+        "arguments": args_dict,
+        "file": submission_file_path
+    }
+    due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
+    remote = get_client("master_schedule")
+    rid = remote.submit(pipeline, expid, priority, due_date, False)
+    return rid
+
+
 @app.post("/experiment/submit/")
-async def submit_experiment(submission: ExperimentSubmission) -> int:
+async def submit_experiment_payload(submission: ExperimentSubmission) -> int:
     """Submits the given experiment file.
     
     Args:
@@ -458,46 +517,15 @@ async def submit_experiment(submission: ExperimentSubmission) -> int:
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
-
-    file = submission.file
-    raw_cpp = submission.raw_cpp
-    cls = submission.cls
-    args = submission.args
-    pipeline = submission.pipeline
-    priority = submission.priority
-    timed = submission.timed
-
-    if (file is None) == (raw_cpp is None):
-        raise HTTPException(
-            status_code=400,
-            detail="Specify exactly one of 'file' or 'raw_cpp'."
-        )
-    
-    if file is not None:
-        # Experiment file path submission via IQUIP
-        submission_file_path = posixpath.join(configs["repository_path"], file)
-        args_dict = json.loads(args)
-        expid = {
-            "log_level": logging.WARNING,
-            "class_name": cls,
-            "arguments": args_dict,
-            "file": submission_file_path
-        }
-        
-    else:
-        # Raw cpp code submission via the control server
-        expid = {
-            "log_level": logging.WARNING,
-            "raw_code": raw_cpp,
-            "class_name": cls,
-            "arguments": None
-        }
-        
-    due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
-    remote = get_client("master_schedule")
-    rid = remote.submit(pipeline, expid, priority, due_date, False)
-
-    return rid
+    return _submit_experiment_to_schedule(
+        submission.file,
+        submission.raw_cpp,
+        submission.cls,
+        submission.args,
+        submission.pipeline,
+        submission.priority,
+        submission.timed,
+    )
 
 
 @app.get("/experiment/status/")
@@ -631,7 +659,7 @@ async def get_dataset_modification(websocket: WebSocket):
 
     After accepted, it receives the target dataset name and the period fetching the dataset.
     Then, it sends the current dataset, parameters, and units immediately.
-    Finally, it sends the dataset modificiation at least a second apart.
+    Finally, it sends the dataset modificiation at least a second apart, every time it is modified.
 
     For details about dataset modificiation, see dataset.DatasetTracker.since().
 
