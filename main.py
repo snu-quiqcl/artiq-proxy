@@ -105,7 +105,7 @@ def load_device_db():
 
 async def run_subscriber(subscriber: Subscriber):
     """Runs the subscriber's receiving task and closes it finally.
-    
+
     Args:
         subscriber: Target subscriber.
     """
@@ -117,7 +117,7 @@ async def run_subscriber(subscriber: Subscriber):
 
 async def create_subscriber_task(notifier_name: str, tracker: trck.Tracker) -> asyncio.Task:
     """Creates a subscriber task and returns it.
-    
+
     Args:
         notifier_name, tracker.target_builder, and tracker.notify_callback are passed to
         sipyco.sync_struct.Subscriber.__init__().
@@ -129,7 +129,7 @@ async def create_subscriber_task(notifier_name: str, tracker: trck.Tracker) -> a
 
 async def init_schedule_tracker() -> asyncio.Task:
     """Initializes the schedule tracker and runs the subscriber.
-    
+
     This should be called after loading config.
     """
     global schedule_tracker  # pylint: disable=global-statement
@@ -139,7 +139,7 @@ async def init_schedule_tracker() -> asyncio.Task:
 
 async def init_dataset_tracker() -> asyncio.Task:
     """Initializes the dataset tracker and runs the subscriber.
-    
+
     This should be called after loading config.
     """
     global dataset_tracker  # pylint: disable=global-statement
@@ -149,7 +149,7 @@ async def init_dataset_tracker() -> asyncio.Task:
 
 async def init_ttl_manager():
     """Initializes the TTL manager connecting to ARTIQ moninj proxy.
-    
+
     This should be called after loading config.
     """
     global ttl_device_channel_mapping, ttl_manager  # pylint: disable=global-statement
@@ -187,7 +187,7 @@ app = FastAPI(lifespan=lifespan)
 async def list_directory(directory: str = "") -> list[str]:
     """Gets the list of elements in the given path and returns it.
 
-    The "master_path" and "repository_path" in the configuration file 
+    The "master_path" and "repository_path" in the configuration file
     is used for the prefix of the path.
 
     Args:
@@ -209,7 +209,7 @@ async def list_directory(directory: str = "") -> list[str]:
 async def list_config_directory(directory: str = "") -> list[str]:
     """Gets the list of elements in the given path and returns it.
 
-    The "master_path" and "repository_path" in the configuration file 
+    The "master_path" and "repository_path" in the configuration file
     is used for the prefix of the path.
 
     Args:
@@ -233,7 +233,7 @@ async def list_config_directory(directory: str = "") -> list[str]:
 
 class ExperimentInfo(pydantic.BaseModel):
     """Experiment information.
-    
+
     This is the return type of get_experiment_info().
 
     Fields:
@@ -276,7 +276,7 @@ class ExperimentSubmission(pydantic.BaseModel):
 @app.get("/experiment/info/", response_model=dict[str, ExperimentInfo])
 async def get_experiment_info(file: str) -> Any:
     """Gets information of the given experiment file and returns it.
-    
+
     Args:
         file: The path of the experiment file.
 
@@ -290,7 +290,7 @@ async def get_experiment_info(file: str) -> Any:
 @app.get("/configuration/info/", response_model=dict[str, ConfigurationInfo])
 async def get_configuration_info(file: str) -> Any:
     """Gets configuration of current lolenc system
-    
+
     Args:
         file: The path of the experiment file.
 
@@ -316,7 +316,7 @@ async def submit_configuration(  # pylint: disable=too-many-arguments
     args: str = "{}",
 ) -> None:
     """Submits the given experiment file.
-    
+
     Args:
         file: The path of the experiment file.
         cls: The class name of the experiment to be submitted.
@@ -326,7 +326,7 @@ async def submit_configuration(  # pylint: disable=too-many-arguments
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
-    
+
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
@@ -342,7 +342,7 @@ async def submit_configuration(  # pylint: disable=too-many-arguments
 @app.get("/configuration/info/", response_model=dict[str, ConfigurationInfo])
 async def get_configuration_info(file: str) -> Any:
     """Gets configuration of current lolenc system
-    
+
     Args:
         file: The path of the experiment file.
 
@@ -368,7 +368,7 @@ async def submit_configuration(  # pylint: disable=too-many-arguments
     args: str = "{}",
 ) -> None:
     """Submits the given experiment file.
-    
+
     Args:
         file: The path of the experiment file.
         cls: The class name of the experiment to be submitted.
@@ -378,7 +378,7 @@ async def submit_configuration(  # pylint: disable=too-many-arguments
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
-    
+
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
@@ -464,11 +464,12 @@ def _submit_experiment_to_schedule(
             "file": submission_file_path
         }
     else:
+        args_dict = json.loads(args)
         expid = {
             "log_level": logging.WARNING,
             "raw_code": raw_cpp,
             "class_name": cls,
-            "arguments": None
+            "arguments": args_dict
         }
 
     due_date = None if timed is None else time.mktime(datetime.fromisoformat(timed).timetuple())
@@ -486,7 +487,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     timed: Optional[str] = None,
 ) -> int:
     """Submits the given experiment file.
-    
+
     Args:
         file: The path of the experiment file.
         cls: The class name of the experiment to be submitted.
@@ -496,7 +497,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
-    
+
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
@@ -517,7 +518,7 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
 @app.post("/experiment/submit/")
 async def submit_experiment_payload(submission: ExperimentSubmission) -> int:
     """Submits the given experiment file.
-    
+
     Args:
         file: The path of the experiment file.
         raw_cpp: The raw cpp code to be submitted.
@@ -528,7 +529,7 @@ async def submit_experiment_payload(submission: ExperimentSubmission) -> int:
         priority: Higher value means sooner scheduling.
         timed: The due date for the experiment in ISO format.
           None for no due date.
-    
+
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
@@ -546,10 +547,10 @@ async def submit_experiment_payload(submission: ExperimentSubmission) -> int:
 @app.get("/experiment/status/")
 async def get_status(rid: int) -> Optional[dict]:
     """Gets the current status of the given RID.
-    
+
     Args:
         rid: The run identifier value of the experiment.
-    
+
     Returns:
         A status dictionary with "pipeline", "expid", "priority", "due_date", "status", etc.
         If the experiment is done or cancelled, it returns None.
@@ -563,7 +564,7 @@ async def get_status(rid: int) -> Optional[dict]:
 @app.get("/rid/list/")
 async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list[int]:
     """Returns the list of RIDs corresponding the given date and hour.
-    
+
     Args:
         date: Target date with the format "yyyy-mm-dd".
         hour: Target hour. If None, it searches for all hours.
@@ -578,7 +579,7 @@ async def list_rid_from_date_hour(date: str, hour: Optional[int] = None) -> list
 
 def get_result_file_from_rid(rid: int) -> Optional[str]:
     """Returns the result file corresponding to the given RID.
-    
+
     Args:
         rid: Target run identifier value.
 
@@ -596,11 +597,11 @@ def get_result_file_from_rid(rid: int) -> Optional[str]:
 @app.get("/dataset/rid/")
 async def get_rid_dataset(rid: int, key: str) -> Optional[Union[int, float, list]]:
     """Returns the dataset in the result file of the given RID.
-    
+
     Args:
         rid: Target run identifier value.
         key: Target dataset key.
-    
+
     Returns:
         If the dataset does not exist, it returns None.
     """
@@ -635,7 +636,7 @@ async def get_master_dataset(key: str) -> Union[int, float, list, tuple]:
 @app.get("/dataset/rid/list/")
 async def list_dataset_from_rid(rid: int) -> list[str]:
     """Returns the list of dataset names in the result file of the given RID.
-    
+
     Args:
         rid: Target run identifier value.
     """
@@ -649,7 +650,7 @@ async def list_dataset_from_rid(rid: int) -> list[str]:
 @app.websocket("/dataset/master/list/")
 async def list_dataset(websocket: WebSocket):
     """Sends the list of datasets available in artiq master whenever it is modified.
-    
+
     After accepted, it sends the current dataset list immediately.
     Then, it sends the dataset list every time it is modified.
 
@@ -710,7 +711,7 @@ async def get_dataset_modification(websocket: WebSocket):
 @app.websocket("/ttl/status/modification/")
 async def get_ttl_status_modification(websocket: WebSocket):
     """Sends the modifications of TTL status whenever it is modified.
-    
+
     After accepted, it receives the target TTL list.
     Then, it sends the current TTL status immediately.
     Finally, it sends the modifications of TTL status everty time it is modified.
@@ -740,10 +741,10 @@ async def get_ttl_status_modification(websocket: WebSocket):
 
 class TTLControlInfo(pydantic.BaseModel):
     """TTL control information.
-    
+
     Fields:
         devices, values: List of TTL device name in the device DB and value to be modified,
-          repectively. The lengths of these lists should be identical. 
+          repectively. The lengths of these lists should be identical.
     """
     devices: list[str]
     values: list[bool]
@@ -752,7 +753,7 @@ class TTLControlInfo(pydantic.BaseModel):
 @app.post("/ttl/level/")
 async def set_ttl_level(control_info: TTLControlInfo):
     """Sets the overriding values of the given TTL channels.
-    
+
     This only sets the value to be output when overridden, but does not turn on overriding.
 
     Args:
@@ -784,7 +785,7 @@ async def set_ttl_override(control_info: TTLControlInfo):
 @app.post("/dac/voltage/")
 async def set_dac_voltage(device: str, channel: int, value: float):
     """Sets the voltage of the given DAC channel.
-    
+
     Args:
         device: The DAC device name described in device_db.py.
         channel: The DAC channel number. For Zotino, there are 32 channels, from 0 to 31.
@@ -830,7 +831,7 @@ async def set_dds_profile(
     switching: bool
 ):  # pylint: disable=too-many-arguments
     """Sets the default profile of the given DDS channel.
-    
+
     Args:
         device: The DDS device name described in device_db.py.
         channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
@@ -918,7 +919,7 @@ class {class_name}(EnvExperiment):
 @app.post("/dds/switch/")
 async def set_dds_switch(device: str, channel: int, on: bool) -> int:
     """Turns on and off the TTL switch, which controls the given DDS channel.
-    
+
     Args:
         device: The DDS device name described in device_db.py.
         channel: The DDS channel number. For Urukul, there are 4 channels, from 0 to 3.
@@ -986,23 +987,23 @@ def get_client(target_name: str) -> rpc.Client:
 
 def is_experiment_complete(rid: int) -> bool:
     """Checks if an experiment with given RID is complete.
-    
+
     Args:
         rid: The run identifier value of the experiment.
-    
+
     Returns:
         True if the experiment is complete (finished, error, or cancelled), False otherwise.
     """
     remote = get_client("master_schedule")
     status = remote.get_status()
-    
+
     # If RID not in status, it means the experiment is complete
     if rid not in status:
         return True
-        
+
     # Get experiment status
     exp_status = status[rid].get("status", None)
-    
+
     # Status that indicate the experiment is still running
     running_states = [
     # TODO: Check for the status tracking of the experiment
@@ -1012,19 +1013,19 @@ def is_experiment_complete(rid: int) -> bool:
         "running",      # Currently running
         "paused"       # Temporarily paused
     ]
-    
+
     return exp_status not in running_states
 
 
 @app.websocket("/experiment/watch/{rid}")
 async def watch_experiment(websocket: WebSocket, rid: int):
     """Watch experiment until completion.
-    
+
     Maintains WebSocket connection while experiment is running.
     Closes connection when experiment completes.
     Client should then use the existing /dataset/rid/ endpoint
     to retrieve the data.
-    
+
     Args:
         websocket: The WebSocket connection
         rid: Run identifier of the experiment
@@ -1034,17 +1035,17 @@ async def watch_experiment(websocket: WebSocket, rid: int):
         # Keep connection open while experiment is running
         while not is_experiment_complete(rid):
             await asyncio.sleep(0.1)
-        
+
         # Get the list of available datasets for this RID
         dataset_list = await list_dataset_from_rid(rid)
-        
+
         # Send completion message with available datasets
         await websocket.send_json({
             "status": "complete",
             "datasets": dataset_list
         })
         await websocket.close()
-        
+
     except WebSocketDisconnect:
         logger.info(f"Client disconnected from experiment watcher for RID: {rid}")
     except Exception as e:
