@@ -425,6 +425,7 @@ async def delete_experiment(rid: int):
     """
     remote = get_client("master_schedule")
     remote.delete(rid)
+    return {"rid": rid, "status": "deleted"}
 
 
 @app.post("/experiment/terminate/")
@@ -436,6 +437,7 @@ async def request_termination_of_experiment(rid: int):
     """
     remote = get_client("master_schedule")
     remote.request_termination(rid)
+    return {"rid": rid, "status": "termination_requested"}
 
 
 def _submit_experiment_to_schedule(
