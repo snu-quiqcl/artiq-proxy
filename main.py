@@ -44,6 +44,28 @@ import threading
 system_mode = "service"
 system_mode_lock = threading.Lock()
 
+VALID_SYSTEM_MODES = ("service", "experiment")
+
+
+def _get_system_mode_value() -> str:
+    """Read the current system mode under the shared lock."""
+    with system_mode_lock:
+        return system_mode
+
+
+def _require_system_mode_for_submit(required_mode: str, method_name: str) -> None:
+    """Reject experiment submissions made through the wrong mode-specific API."""
+    current_mode = _get_system_mode_value()
+    if current_mode != required_mode:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"{method_name} /experiment/submit/ is only allowed in "
+                f"{required_mode} mode. Current system mode is {current_mode}."
+            ),
+        )
+
+
 class Setting(BaseSettings):  # pylint: disable=too-few-public-methods
     """Setting to specify the target config file path."""
     config_path: str = "config.json"
@@ -503,6 +525,8 @@ async def submit_experiment(  # pylint: disable=too-many-arguments
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    _require_system_mode_for_submit("experiment", "GET")
+
     submission_file_path = posixpath.join(configs["repository_path"], file)
     args_dict = json.loads(args)
     expid = {
@@ -535,6 +559,8 @@ async def submit_experiment_payload(submission: ExperimentSubmission) -> int:
     Returns:
         The run identifier, an integer which is incremented at each experiment submission.
     """
+    _require_system_mode_for_submit("service", "POST")
+
     return _submit_experiment_to_schedule(
         submission.file,
         submission.raw_cpp,
@@ -1062,14 +1088,13 @@ async def watch_experiment(websocket: WebSocket, rid: int):
 @app.get("/system_mode/")
 async def get_system_mode():
     """Get the current system mode ('service' or 'experiment')."""
-    with system_mode_lock:
-        return {"system_mode": system_mode}
+    return {"system_mode": _get_system_mode_value()}
 
 
 @app.post("/system_mode/")
 async def set_system_mode(mode: str = Body(..., embed=True)):
     """Set the system mode to 'service' or 'experiment'."""
-    if mode not in ("service", "experiment"):
+    if mode not in VALID_SYSTEM_MODES:
         return {"error": "Invalid mode. Must be 'service' or 'experiment'."}
     with system_mode_lock:
         global system_mode

@@ -35,6 +35,7 @@ class RoutingTest(unittest.TestCase):
         mocked_ttl_manager.connection = mock.AsyncMock()
         mocked_get_client = patcher_get_client.start()
         self.mocked_client = mocked_get_client.return_value
+        main.system_mode = "service"
         self.addCleanup(patcher_load_configs.stop)
         self.addCleanup(patcher_load_device_db.stop)
         self.addCleanup(patcher_init_ttl_manager.stop)
@@ -43,6 +44,7 @@ class RoutingTest(unittest.TestCase):
         self.addCleanup(patcher_dataset_tracker.stop)
         self.addCleanup(patcher_ttl_manager.stop)
         self.addCleanup(patcher_get_client.stop)
+        self.addCleanup(setattr, main, "system_mode", "service")
 
     @mock.patch.dict("main.configs",
                      {"master_path": "master_path/", "repository_path": "repo_path/"})
@@ -153,6 +155,54 @@ class RoutingTest(unittest.TestCase):
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), test_rid)
+
+    @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
+    def test_get_submit_only_allowed_in_experiment_mode(self):
+        test_rid = 10
+        self.mocked_client.submit.return_value = test_rid
+
+        with TestClient(main.app) as client:
+            response = client.get("/experiment/submit/", params={"file": "experiment.py"})
+            self.assertEqual(response.status_code, 403)
+            self.assertIn("experiment mode", response.json()["detail"])
+            self.mocked_client.submit.assert_not_called()
+
+            client.post("/system_mode/", json={"mode": "experiment"})
+            response = client.get("/experiment/submit/", params={"file": "experiment.py"})
+
+        expid = {
+            "log_level": logging.WARNING,
+            "class_name": None,
+            "arguments": {},
+            "file": posixpath.join("repo_path", "experiment.py")
+        }
+        self.mocked_client.submit.assert_called_once_with("main", expid, 0, None, False)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), test_rid)
+
+    @mock.patch.dict("main.configs", {"repository_path": "repo_path/"})
+    def test_post_submit_only_allowed_in_service_mode(self):
+        test_rid = 11
+        self.mocked_client.submit.return_value = test_rid
+        payload = {"file": "experiment.py"}
+
+        with TestClient(main.app) as client:
+            response = client.post("/experiment/submit/", json=payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), test_rid)
+
+            client.post("/system_mode/", json={"mode": "experiment"})
+            response = client.post("/experiment/submit/", json=payload)
+
+        expid = {
+            "log_level": logging.WARNING,
+            "class_name": None,
+            "arguments": {},
+            "file": posixpath.join("repo_path", "experiment.py")
+        }
+        self.mocked_client.submit.assert_called_once_with("main", expid, 0, None, False)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("service mode", response.json()["detail"])
 
 
 class FunctionTest(unittest.TestCase):
